@@ -314,10 +314,14 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 15px;
-  color: white;
+  color: white; /* белый цвет текста */
   resize: none;
   font-family: inherit;
   margin-bottom: 10px;
+}
+
+.chat-input textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5); /* цвет плейсхолдера */
 }
 
 .chat-input textarea:disabled {

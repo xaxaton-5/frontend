@@ -95,25 +95,23 @@ export const useChatStore = defineStore('chat', () => {
         const data = JSON.parse(event.data);
         console.log('Получено сообщение от WebSocket:', data);
 
-        // Обработка входящих сообщений
-        // data может быть как объектом сообщения, так и содержать поле message
-        let messageData: ChatMessage;
+        // Новый формат сообщения:
+        // {
+        //   "text": "Мне нравится сервис, очень крутые игры🎮",
+        //   "sender_name": "Parent",
+        //   "sender_id": 5,
+        //   "type": "text_msg"
+        // }
 
-        if (data.message) {
-          messageData = data.message;
-        } else if (data.from_user !== undefined && data.text !== undefined) {
-          messageData = data;
-        } else {
-          console.warn('Неизвестный формат сообщения:', data);
-          return;
-        }
+        // Создаем сообщение в формате ChatMessage
+        const newMessage: ChatMessage = {
+          id: Date.now(), // временный ID, потом заменится на реальный
+          from_user: data.sender_id,
+          text: data.text,
+          sent_date: new Date().toISOString(),
+        };
 
-        addMessage({
-          id: messageData.id,
-          from_user: messageData.from_user,
-          text: messageData.text,
-          sent_date: messageData.sent_date || new Date().toISOString(),
-        });
+        addMessage(newMessage);
       } catch (err) {
         console.error('Ошибка парсинга WebSocket сообщения:', err);
       }
