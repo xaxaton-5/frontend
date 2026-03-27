@@ -156,7 +156,7 @@
           <div class="achievement-icon">{{ achievement.icon }}</div>
           <h3>{{ achievement.title }}</h3>
           <p>{{ achievement.description }}</p>
-          <div class="achievement-xp">+{{ achievement.xp }} XP</div>
+          <div class="achievement-xp">+{{ achievement.xpReward }} XP</div>
           <div
             v-if="!achievement.unlocked"
             class="achievement-lock"
@@ -165,9 +165,17 @@
           </div>
           <div
             v-else
-            class="achievement-unlock-date"
+            class="achievement-footer"
           >
-            Получено: {{ achievement.unlockDate }}
+            <span class="achievement-unlock-date">
+              🎉 Получено: {{ achievement.unlockedDate }}
+            </span>
+            <button
+              class="share-achievement-btn"
+              @click="shareAchievement(achievement)"
+            >
+              📱 Поделиться
+            </button>
           </div>
         </div>
       </div>
@@ -293,8 +301,10 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue';
 import { useAuthStore } from '@/stores/authStore';
+import { useUserStatsStore } from '@/stores/userStatsStore';
 
 const authStore = useAuthStore();
+const userStatsStore = useUserStatsStore();
 const currentTab = ref('chat');
 const showEmojiPicker = ref(false);
 const showShareModal = ref(false);
@@ -355,54 +365,6 @@ const onlineUsers = ref([
   },
 ]);
 
-const achievements = ref([
-  {
-    id: 1,
-    title: 'Первая переменная',
-    description: 'Создал свою первую переменную',
-    icon: '📦',
-    xp: 50,
-    unlocked: true,
-    unlockDate: '15.03.2024',
-  },
-  {
-    id: 2,
-    title: 'Король циклов',
-    description: 'Решил 10 задач на циклы',
-    icon: '🔄',
-    xp: 100,
-    unlocked: true,
-    unlockDate: '18.03.2024',
-  },
-  {
-    id: 3,
-    title: 'Мастер функций',
-    description: 'Создал 5 собственных функций',
-    icon: '⚡',
-    xp: 150,
-    unlocked: false,
-    unlockDate: '',
-  },
-  {
-    id: 4,
-    title: 'Баг-хантер',
-    description: 'Нашёл и исправил 10 ошибок в коде',
-    icon: '🐛',
-    xp: 200,
-    unlocked: false,
-    unlockDate: '',
-  },
-  {
-    id: 5,
-    title: 'Социальный кодер',
-    description: 'Отправил 50 сообщений в чате',
-    icon: '💬',
-    xp: 100,
-    unlocked: false,
-    unlockDate: '',
-  },
-]);
-
 const projects = ref([
   {
     id: 1,
@@ -432,11 +394,28 @@ let guess = prompt('Угадай число:');`,
   },
 ]);
 
-const totalAchievements = computed(() => achievements.value.length);
-const userAchievementsCount = computed(() => achievements.value.filter((a) => a.unlocked).length);
+// Достижения из store
+const achievements = computed(() => userStatsStore.achievements);
+const totalAchievements = computed(() => userStatsStore.totalAchievements);
+const userAchievementsCount = computed(() => userStatsStore.unlockedAchievementsCount);
 const completionPercent = computed(() =>
   Math.round((userAchievementsCount.value / totalAchievements.value) * 100),
 );
+
+// Поделиться достижением в ВК
+const shareAchievement = (achievement: any) => {
+  const shareText = `🎉 Я получил достижение "${achievement.title}" в CodeCraft! 🎉\n\n${achievement.description}\n\n🏆 +${achievement.xpReward} XP\n\nПрисоединяйся ко мне в этом увлекательном приключении! 🚀\n\n#CodeCraft #Программирование #Достижение`;
+
+  const shareUrl = encodeURIComponent(window.location.origin);
+  const shareTitle = encodeURIComponent(`Моё достижение в CodeCraft: ${achievement.title}`);
+  const shareDescription = encodeURIComponent(shareText);
+
+  window.open(
+    `https://vk.com/share.php?url=${shareUrl}&title=${shareTitle}&description=${shareDescription}&noparse=true`,
+    'sharer',
+    'toolbar=0,status=0,width=626,height=436',
+  );
+};
 
 const sendMessage = async () => {
   if (!newMessage.value.trim()) return;
@@ -466,7 +445,6 @@ const addEmoji = (emoji: string) => {
 };
 
 const showReactionPicker = (messageId: number) => {
-  // Реализация выбора реакции
   console.log('Show reaction picker for message', messageId);
 };
 
@@ -519,6 +497,15 @@ const shareProject = () => {
   color: white;
   text-shadow: 3px 3px 0 #ff6b6b;
   margin-bottom: 15px;
+}
+
+.title-emoji {
+  font-size: 54px;
+}
+
+.page-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 18px;
 }
 
 .community-tabs {
@@ -782,7 +769,7 @@ const shareProject = () => {
 
 .achievements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
 
@@ -825,6 +812,7 @@ const shareProject = () => {
 .achievement-xp {
   color: #ffd166;
   font-weight: bold;
+  margin-bottom: 12px;
 }
 
 .achievement-lock {
@@ -834,10 +822,41 @@ const shareProject = () => {
   font-size: 24px;
 }
 
-.achievement-unlock-date {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+.achievement-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.achievement-unlock-date {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  flex: 1;
+  text-align: left;
+}
+
+.share-achievement-btn {
+  background: #4c75a3;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.share-achievement-btn:hover {
+  background: #3a5a80;
+  transform: scale(1.05);
 }
 
 /* Проекты */
@@ -1032,6 +1051,18 @@ const shareProject = () => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
   }
 }
 </style>

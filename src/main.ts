@@ -5,6 +5,7 @@ import App from './App.vue';
 import './assets/style.scss';
 import router from './router';
 import { useAuthStore } from './stores/authStore';
+import { useUserStatsStore } from './stores/userStatsStore';
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -12,8 +13,11 @@ const pinia = createPinia();
 app.use(pinia);
 app.use(router);
 
-// Инициализация авторизации перед монтированием
+// Инициализация
 const authStore = useAuthStore();
+const userStatsStore = useUserStatsStore();
+
 authStore.init();
+userStatsStore.init();
 
 app.mount('#app');

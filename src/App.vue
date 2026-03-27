@@ -1,11 +1,10 @@
-<!-- В App.vue измени основную структуру -->
-
+<!-- App.vue -->
 <template>
   <div
     id="app"
     :class="{ 'dark-mode': isDarkMode }"
   >
-    <!-- Анимированный фон (всегда) -->
+    <!-- Анимированный фон -->
     <div class="animated-bg">
       <div class="gradient-bg"></div>
       <div class="floating-shapes">
@@ -20,7 +19,7 @@
 
     <!-- Контент приложения -->
     <div class="app-content">
-      <!-- Хедер (показываем всегда, но с разным контентом) -->
+      <!-- Хедер -->
       <header class="game-header">
         <div
           class="logo"
@@ -179,7 +178,7 @@
         </router-view>
       </main>
 
-      <!-- Welcome секция для неавторизованных (показываем вместо main-content) -->
+      <!-- Welcome секция для неавторизованных -->
       <div
         v-if="!authStore.isAuthenticated"
         class="welcome-section"
@@ -241,10 +240,25 @@
       >
         <div
           class="daily-reward"
+          :class="{ claimed: dailyRewardClaimed }"
           @click="claimDailyReward"
         >
           <span class="reward-icon">🎁</span>
-          <span>Ежедневная награда</span>
+          <div class="reward-info">
+            <span>Ежедневная награда</span>
+            <span
+              class="reward-cooldown"
+              v-if="dailyRewardClaimed"
+            >
+              ⏰ {{ rewardCooldownText }}
+            </span>
+            <span
+              class="reward-available"
+              v-else
+            >
+              ✨ {{ rewardCooldownText }}
+            </span>
+          </div>
         </div>
         <div class="online-count">
           <span class="online-dot"></span>
@@ -310,6 +324,9 @@ const isDarkMode = ref(false);
 const onlineCount = ref(1234);
 const notifications = ref<any[]>([]);
 
+// Ежедневная награда
+const dailyRewardClaimed = ref(false);
+
 const user = computed(() => authStore.user);
 
 const xpPercentage = computed(() => {
@@ -327,6 +344,80 @@ const navTabs = [
   { path: '/leaderboard', name: 'Рейтинг', emoji: '🏆' },
   { path: '/community', name: 'Сообщество', emoji: '👥' },
 ];
+
+// Проверка возможности получения награды
+const checkDailyReward = () => {
+  const lastRewardDate = localStorage.getItem('dailyRewardDate');
+  const today = new Date().toDateString();
+
+  if (lastRewardDate === today) {
+    dailyRewardClaimed.value = true;
+    return false;
+  }
+
+  dailyRewardClaimed.value = false;
+  return true;
+};
+
+// Получение времени до следующей награды
+const getTimeUntilNextReward = () => {
+  const lastReward = localStorage.getItem('dailyRewardDate');
+  if (!lastReward) return 'доступно сейчас';
+
+  const lastDate = new Date(lastReward);
+  const nextDate = new Date(lastDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+  nextDate.setHours(0, 0, 0, 0);
+
+  const now = new Date();
+  const diff = nextDate.getTime() - now.getTime();
+
+  if (diff <= 0) return 'доступно сейчас';
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) return `${hours} ч ${minutes} мин`;
+  return `${minutes} мин`;
+};
+
+// Форматирование времени для отображения
+const rewardCooldownText = computed(() => {
+  if (!dailyRewardClaimed.value && checkDailyReward()) {
+    return 'доступно!';
+  }
+  return getTimeUntilNextReward();
+});
+
+// Получение награды
+const claimDailyReward = () => {
+  if (!checkDailyReward()) {
+    const timeLeft = getTimeUntilNextReward();
+    showNotification(`🎁 Ты уже получил награду сегодня! Следующая через ${timeLeft}`, 'info');
+    return;
+  }
+
+  const rewardXP = 50;
+  const rewardBonus = Math.floor(Math.random() * 30) + 20;
+
+  if (authStore.user) {
+    authStore.user.xp += rewardXP + rewardBonus;
+    localStorage.setItem('user', JSON.stringify(authStore.user));
+    localStorage.setItem('dailyRewardDate', new Date().toDateString());
+
+    dailyRewardClaimed.value = true;
+    showNotification(
+      `🎁 Ежедневная награда! +${rewardXP + rewardBonus} XP (${rewardXP} + бонус ${rewardBonus})! 🎉`,
+      'success',
+    );
+
+    const newLevel = Math.floor(authStore.user.xp / 1000) + 1;
+    if (newLevel > authStore.user.level) {
+      authStore.user.level = newLevel;
+      showNotification(`🎉 ПОЗДРАВЛЯЕМ! Ты достиг ${newLevel} уровня! 🎉`, 'success');
+    }
+  }
+};
 
 const getShapeStyle = (i: number) => ({
   left: Math.random() * 100 + '%',
@@ -408,10 +499,6 @@ const toggleDarkMode = () => {
   showUserMenu.value = false;
 };
 
-const claimDailyReward = () => {
-  showNotification('🎁 Ты получил 50 XP и волшебный сундук!', 'success');
-};
-
 const showAbout = () => {
   showNotification('💡 Помощь: напиши в поддержку support@codecraft.ru', 'info');
 };
@@ -424,6 +511,7 @@ const showSupport = () => {
   showNotification('🆘 Поддержка ответит в течение 24 часов', 'info');
 };
 
+// Закрытие меню при клике вне
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
   if (!target.closest('.user-profile') && !target.closest('.user-menu')) {
@@ -431,17 +519,30 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
-let interval: any;
+// Обновление онлайн-счетчика и таймера награды
+let onlineInterval: any;
+let rewardTimerInterval: any;
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
-  interval = setInterval(() => {
+  onlineInterval = setInterval(() => {
     onlineCount.value = Math.floor(1200 + Math.random() * 300);
   }, 5000);
+
+  // Проверяем ежедневную награду при загрузке
+  checkDailyReward();
+
+  // Обновляем таймер награды каждую минуту
+  rewardTimerInterval = setInterval(() => {
+    // Принудительно обновляем вычисляемое свойство
+    rewardCooldownText.value;
+  }, 60000);
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
-  clearInterval(interval);
+  clearInterval(onlineInterval);
+  if (rewardTimerInterval) clearInterval(rewardTimerInterval);
 });
 </script>
 
@@ -542,7 +643,7 @@ body {
   flex: 1;
 }
 
-/* Хедер - исправленная версия */
+/* Хедер */
 .game-header {
   display: flex;
   justify-content: space-between;
@@ -601,7 +702,6 @@ body {
   backdrop-filter: blur(5px);
 }
 
-/* Статистика (уровень и XP) */
 .stats-container {
   display: flex;
   align-items: center;
@@ -659,15 +759,6 @@ body {
   animation: shimmer 2s infinite;
 }
 
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
 .xp-text {
   position: absolute;
   top: 50%;
@@ -682,7 +773,15 @@ body {
   pointer-events: none;
 }
 
-/* Профиль пользователя */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .user-profile {
   display: flex;
   align-items: center;
@@ -756,7 +855,6 @@ body {
   transform: rotate(180deg);
 }
 
-/* Кнопка выхода */
 .logout-btn {
   background: rgba(255, 71, 87, 0.2);
   border: 1px solid rgba(255, 71, 87, 0.5);
@@ -784,7 +882,6 @@ body {
   height: 18px;
 }
 
-/* Кнопка входа */
 .login-btn-header {
   display: flex;
   align-items: center;
@@ -927,31 +1024,9 @@ body {
   flex: 1;
   padding: 20px 30px;
   position: relative;
-  min-height: auto;
 }
 
-/* Welcome overlay */
-.welcome-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 10;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.welcome-overlay .hero-section {
-  pointer-events: auto;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
+/* Welcome секция */
 .welcome-section {
   display: flex;
   align-items: center;
@@ -1110,14 +1185,14 @@ body {
   padding: 15px 30px;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
-  margin-top: auto; /* Это ключевое свойство */
+  margin-top: auto;
   flex-shrink: 0;
 }
 
 .daily-reward {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background: linear-gradient(135deg, #ffd166, #ff6b6b);
   padding: 8px 20px;
   border-radius: 50px;
@@ -1128,14 +1203,51 @@ body {
   font-size: 14px;
 }
 
-.daily-reward:hover {
+.daily-reward:hover:not(.claimed) {
   transform: scale(1.05);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
+.daily-reward.claimed {
+  background: linear-gradient(135deg, #888, #666);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.daily-reward.claimed:hover {
+  transform: none;
+}
+
 .reward-icon {
-  font-size: 20px;
+  font-size: 24px;
   animation: bounce 1s infinite;
+}
+
+.reward-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.reward-cooldown {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.reward-available {
+  font-size: 10px;
+  color: #ffd166;
+  animation: rewardPulse 1s infinite;
+}
+
+@keyframes rewardPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .online-count {
@@ -1386,6 +1498,15 @@ body {
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+
+  .daily-reward {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .reward-info {
+    align-items: center;
   }
 
   .main-content {

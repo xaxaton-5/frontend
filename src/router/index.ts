@@ -62,6 +62,16 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/Profile.vue'),
+    meta: {
+      title: 'Мой профиль',
+      requiresAuth: true,
+      transition: 'slide-up',
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     // Перенаправляем на главную, так как у нас нет отдельной страницы 404

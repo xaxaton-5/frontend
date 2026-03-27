@@ -51,6 +51,19 @@ const goToCommunity = () => router.push('/community');
 </script>
 
 <style scoped>
+.welcome-title {
+  text-align: center;
+  margin-bottom: 40px;
+  font-size: 32px;
+  color: #ffffff;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+  background: linear-gradient(135deg, #fff, #ffe6e6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: white;
+}
+
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

@@ -1,3 +1,4 @@
+<!-- views/Lessons.vue -->
 <template>
   <div class="lessons-page">
     <div class="page-header">
@@ -13,12 +14,12 @@
     <div class="global-progress">
       <div class="progress-info">
         <span>🌟 Общий прогресс</span>
-        <span class="progress-percent">{{ totalProgress }}%</span>
+        <span class="progress-percent">{{ modulesStore.totalProgress }}%</span>
       </div>
       <div class="progress-bar-global">
         <div
           class="progress-fill"
-          :style="{ width: totalProgress + '%' }"
+          :style="{ width: modulesStore.totalProgress + '%' }"
         >
           <div class="progress-glow"></div>
         </div>
@@ -28,14 +29,14 @@
     <!-- Список модулей -->
     <div class="modules-container">
       <div
-        v-for="(module, index) in modules"
+        v-for="(module, index) in modulesStore.modules"
         :key="module.id"
         class="module-section"
         :class="{ completed: module.completed, locked: module.locked }"
       >
         <div
           class="module-header"
-          @click="toggleModule(module.id)"
+          @click="modulesStore.toggleModule(module.id)"
         >
           <div class="module-number">
             <span v-if="!module.completed && !module.locked">{{ index + 1 }}</span>
@@ -58,7 +59,7 @@
               <button
                 v-if="module.id === 1 && !module.locked"
                 class="game-btn"
-                @click.stop="openGame('variables')"
+                @click.stop="modulesStore.openGame('variables')"
                 title="Поиграй и закрепи знания о переменных!"
               >
                 🎮 Играть
@@ -66,30 +67,29 @@
               <button
                 v-if="module.id === 2 && !module.locked"
                 class="game-btn"
-                @click.stop="openGame('loops')"
+                @click.stop="modulesStore.openGame('loops')"
                 title="Поиграй и закрепи знания о циклах!"
               >
                 🎮 Играть
               </button>
-              <!-- Внутри module-actions, после других кнопок игр -->
               <button
                 v-if="module.id === 3 && !module.locked"
                 class="game-btn"
-                @click.stop="openGame('conditions')"
+                @click.stop="modulesStore.openGame('conditions')"
                 title="Поиграй и закрепи знания об условных операторах!"
               >
                 🎮 Играть
               </button>
             </div>
             <button class="expand-btn">
-              {{ expandedModules.includes(module.id) ? '▲' : '▼' }}
+              {{ modulesStore.expandedModules.includes(module.id) ? '▲' : '▼' }}
             </button>
           </div>
         </div>
 
         <transition name="expand">
           <div
-            v-if="expandedModules.includes(module.id)"
+            v-if="modulesStore.expandedModules.includes(module.id)"
             class="lessons-list"
           >
             <div
@@ -100,7 +100,7 @@
                 completed: lesson.completed,
                 locked: lesson.locked,
               }"
-              @click="openLesson(lesson, module)"
+              @click="modulesStore.openLesson(lesson, module)"
             >
               <div class="lesson-icon">{{ lesson.icon }}</div>
               <div class="lesson-content">
@@ -146,38 +146,38 @@
 
     <!-- Модальное окно урока -->
     <div
-      v-if="showLessonModal"
+      v-if="modulesStore.showLessonModal"
       class="lesson-modal"
-      @click.self="closeLesson"
+      @click.self="modulesStore.closeLesson"
     >
       <div class="modal-content">
         <button
           class="modal-close"
-          @click="closeLesson"
+          @click="modulesStore.closeLesson"
         >
           ✕
         </button>
 
         <div class="lesson-content-modal">
           <div class="lesson-header-modal">
-            <span class="lesson-icon-large">{{ currentLesson?.icon }}</span>
-            <h2>{{ currentLesson?.title }}</h2>
+            <span class="lesson-icon-large">{{ modulesStore.currentLesson?.icon }}</span>
+            <h2>{{ modulesStore.currentLesson?.title }}</h2>
             <div class="lesson-info">
-              <span>🎯 {{ currentLesson?.xp }} XP</span>
-              <span>⏱️ {{ currentLesson?.duration }} мин</span>
+              <span>🎯 {{ modulesStore.currentLesson?.xp }} XP</span>
+              <span>⏱️ {{ modulesStore.currentLesson?.duration }} мин</span>
             </div>
           </div>
 
           <!-- Теоретическая часть -->
           <div
-            v-if="currentLesson?.type === 'theory'"
+            v-if="modulesStore.currentLesson?.type === 'theory'"
             class="theory-section"
           >
             <div class="theory-content">
               <h3>📖 Что ты узнаешь?</h3>
               <ul>
                 <li
-                  v-for="point in currentLesson?.content.theoryPoints"
+                  v-for="point in modulesStore.currentLesson?.content.theoryPoints"
                   :key="point"
                 >
                   ✨ {{ point }}
@@ -186,7 +186,7 @@
 
               <div class="code-example">
                 <h4>💡 Пример кода:</h4>
-                <pre><code>{{ currentLesson?.content.codeExample }}</code></pre>
+                <pre><code>{{ modulesStore.currentLesson?.content.codeExample }}</code></pre>
               </div>
             </div>
 
@@ -200,25 +200,33 @@
 
           <!-- Тестовая часть -->
           <div
-            v-else-if="currentLesson?.type === 'test'"
+            v-else-if="modulesStore.currentLesson?.type === 'test'"
             class="test-section"
           >
-            <div v-if="!showTestResults">
+            <div v-if="!modulesStore.showTestResults">
               <div class="test-progress">
-                Вопрос {{ currentQuestionIndex + 1 }} из
-                {{ currentLesson.content.questions.length }}
+                Вопрос {{ modulesStore.currentQuestionIndex + 1 }} из
+                {{ modulesStore.currentLesson.content.questions.length }}
               </div>
 
               <div class="test-question">
-                <h3>{{ currentLesson.content.questions[currentQuestionIndex].question }}</h3>
+                <h3>
+                  {{
+                    modulesStore.currentLesson.content.questions[modulesStore.currentQuestionIndex]
+                      .question
+                  }}
+                </h3>
                 <div class="test-options">
                   <div
-                    v-for="(option, idx) in currentLesson.content.questions[currentQuestionIndex]
-                      .options"
+                    v-for="(option, idx) in modulesStore.currentLesson.content.questions[
+                      modulesStore.currentQuestionIndex
+                    ].options"
                     :key="idx"
                     class="test-option"
-                    :class="{ selected: testAnswers[currentQuestionIndex] === idx }"
-                    @click="selectAnswer(idx)"
+                    :class="{
+                      selected: modulesStore.testAnswers[modulesStore.currentQuestionIndex] === idx,
+                    }"
+                    @click="modulesStore.selectAnswer(idx)"
                   >
                     <span class="option-letter">{{ String.fromCharCode(65 + idx) }}.</span>
                     <span class="option-text">{{ option }}</span>
@@ -228,25 +236,30 @@
 
               <div class="test-navigation">
                 <button
-                  v-if="currentQuestionIndex > 0"
+                  v-if="modulesStore.currentQuestionIndex > 0"
                   class="nav-btn"
-                  @click="prevQuestion"
+                  @click="modulesStore.prevQuestion"
                 >
                   ← Назад
                 </button>
                 <button
-                  v-if="currentQuestionIndex < currentLesson.content.questions.length - 1"
+                  v-if="
+                    modulesStore.currentQuestionIndex <
+                    modulesStore.currentLesson.content.questions.length - 1
+                  "
                   class="nav-btn"
-                  @click="nextQuestion"
-                  :disabled="testAnswers[currentQuestionIndex] === undefined"
+                  @click="modulesStore.nextQuestion"
+                  :disabled="
+                    modulesStore.testAnswers[modulesStore.currentQuestionIndex] === undefined
+                  "
                 >
                   Далее →
                 </button>
                 <button
                   v-else
                   class="submit-test-btn"
-                  @click="submitTest"
-                  :disabled="testAnswers.some((a) => a === undefined)"
+                  @click="modulesStore.submitTest"
+                  :disabled="modulesStore.testAnswers.some((a) => a === undefined)"
                 >
                   📝 Завершить тест
                 </button>
@@ -259,12 +272,16 @@
             >
               <h3>📊 Результаты теста</h3>
               <div class="results-score">
-                <span class="score-number">{{ correctAnswersCount }}</span>
-                <span class="score-total">/ {{ currentLesson.content.questions.length }}</span>
+                <span class="score-number">{{ modulesStore.getCorrectAnswersCount() }}</span>
+                <span class="score-total"
+                  >/ {{ modulesStore.currentLesson.content.questions.length }}</span
+                >
                 <span class="score-percent"
                   >({{
                     Math.round(
-                      (correctAnswersCount / currentLesson.content.questions.length) * 100,
+                      (modulesStore.getCorrectAnswersCount() /
+                        modulesStore.currentLesson.content.questions.length) *
+                        100,
                     )
                   }}%)</span
                 >
@@ -272,28 +289,34 @@
 
               <div class="results-details">
                 <div
-                  v-for="(result, idx) in testResults"
+                  v-for="(result, idx) in modulesStore.testResults"
                   :key="idx"
                   class="result-item"
                   :class="{ correct: result.correct, incorrect: !result.correct }"
                 >
                   <div class="result-question">
                     <span class="result-icon">{{ result.correct ? '✅' : '❌' }}</span>
-                    <span>{{ currentLesson.content.questions[idx].question }}</span>
+                    <span>{{ modulesStore.currentLesson.content.questions[idx].question }}</span>
                   </div>
                   <div class="result-answer">
                     <span class="your-answer"
                       >Твой ответ: {{ String.fromCharCode(65 + result.userAnswer) }}.
-                      {{ currentLesson.content.questions[idx].options[result.userAnswer] }}</span
+                      {{
+                        modulesStore.currentLesson.content.questions[idx].options[result.userAnswer]
+                      }}</span
                     >
                     <span
                       v-if="!result.correct"
                       class="correct-answer"
                       >Правильный ответ:
-                      {{ String.fromCharCode(65 + currentLesson.content.questions[idx].correct) }}.
                       {{
-                        currentLesson.content.questions[idx].options[
-                          currentLesson.content.questions[idx].correct
+                        String.fromCharCode(
+                          65 + modulesStore.currentLesson.content.questions[idx].correct,
+                        )
+                      }}.
+                      {{
+                        modulesStore.currentLesson.content.questions[idx].options[
+                          modulesStore.currentLesson.content.questions[idx].correct
                         ]
                       }}</span
                     >
@@ -304,12 +327,10 @@
               <button
                 class="complete-lesson-btn"
                 @click="completeTestLesson"
-                :disabled="
-                  correctAnswersCount < Math.ceil(currentLesson.content.questions.length * 0.7)
-                "
+                :disabled="!modulesStore.canCompleteTest()"
               >
                 {{
-                  correctAnswersCount >= Math.ceil(currentLesson.content.questions.length * 0.7)
+                  modulesStore.canCompleteTest()
                     ? '🎉 Получить XP и продолжить'
                     : '😢 Нужно набрать 70% для прохождения'
                 }}
@@ -319,12 +340,12 @@
 
           <!-- Практическая часть -->
           <div
-            v-else-if="currentLesson?.type === 'practice'"
+            v-else-if="modulesStore.currentLesson?.type === 'practice'"
             class="practice-section"
           >
             <div class="task-description">
               <h3>🎯 Задание:</h3>
-              <p>{{ currentLesson?.content.task }}</p>
+              <p>{{ modulesStore.currentLesson?.content.task }}</p>
             </div>
 
             <div class="code-editor">
@@ -332,29 +353,31 @@
                 <span>💻 Редактор кода</span>
                 <button
                   class="run-code-btn"
-                  @click="runPracticeCode"
+                  @click="modulesStore.runPracticeCode"
                 >
                   ▶️ Запустить
                 </button>
               </div>
               <textarea
-                v-model="userCode"
+                v-model="modulesStore.userCode"
                 class="code-input"
-                :placeholder="currentLesson?.content.codePlaceholder"
+                :placeholder="modulesStore.currentLesson?.content.codePlaceholder"
               ></textarea>
             </div>
 
             <div
-              v-if="codeOutput"
+              v-if="modulesStore.codeOutput"
               class="code-output"
             >
               <h4>📤 Результат:</h4>
-              <pre :class="{ 'error-output': codeOutput.includes('❌') }">{{ codeOutput }}</pre>
+              <pre :class="{ 'error-output': modulesStore.codeOutput.includes('❌') }">{{
+                modulesStore.codeOutput
+              }}</pre>
             </div>
 
             <button
               class="check-task-btn"
-              @click="checkPracticeTask"
+              @click="handleCheckPractice"
             >
               🔍 Проверить задание
             </button>
@@ -365,27 +388,27 @@
 
     <!-- Модальное окно игры -->
     <div
-      v-if="showGameModal"
+      v-if="modulesStore.showGameModal"
       class="game-modal"
-      @click.self="closeGame"
+      @click.self="modulesStore.closeGame"
     >
       <div class="game-modal-content">
         <button
           class="game-modal-close"
-          @click="closeGame"
+          @click="modulesStore.closeGame"
         >
           ✕
         </button>
         <VariableGame
-          v-if="currentGame === 'variables'"
+          v-if="modulesStore.currentGame === 'variables'"
           @complete="handleGameComplete"
         />
         <LoopsGame
-          v-else-if="currentGame === 'loops'"
+          v-else-if="modulesStore.currentGame === 'loops'"
           @complete="handleGameComplete"
         />
         <ConditionsGame
-          v-else-if="currentGame === 'conditions'"
+          v-else-if="modulesStore.currentGame === 'conditions'"
           @complete="handleGameComplete"
         />
       </div>
@@ -393,277 +416,70 @@
 
     <!-- Поздравление с завершением -->
     <div
-      v-if="showCongrats"
+      v-if="modulesStore.showCongrats"
       class="congrats-overlay"
-      @click="showCongrats = false"
+      @click="modulesStore.resetCongrats"
     >
       <div class="congrats-card">
         <div class="confetti">🎉</div>
         <h2>🎉 Отлично! 🎉</h2>
-        <p>Ты получил {{ lastEarnedXP }} XP!</p>
+        <p>Ты получил {{ modulesStore.lastEarnedXP }} XP!</p>
         <p>Продолжай в том же духе!</p>
-        <button @click="showCongrats = false">🚀 Продолжить</button>
+        <button @click="modulesStore.resetCongrats">🚀 Продолжить</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { onMounted } from 'vue';
 import ConditionsGame from '@/components/games/ConditionsGame.vue';
 import LoopsGame from '@/components/games/LoopsGame.vue';
 import VariableGame from '@/components/games/VariableGame.vue';
-import {
-  modules as modulesData,
-  updateModuleProgress,
-  unlockNextLesson,
-  getTotalProgress,
-} from '@/data/modules';
 import { useAuthStore } from '@/stores/authStore';
+import { useModulesStore } from '@/stores/modulesStore';
+import { useUserStatsStore } from '@/stores/userStatsStore';
 
 const authStore = useAuthStore();
-const expandedModules = ref<number[]>([1]);
-const showLessonModal = ref(false);
-const currentLesson = ref<any>(null);
-const currentModule = ref<any>(null);
-const userCode = ref('');
-const codeOutput = ref('');
-const showCongrats = ref(false);
-const lastEarnedXP = ref(0);
+const userStatsStore = useUserStatsStore();
+const modulesStore = useModulesStore();
 
-// Состояние для тестов
-const testAnswers = ref<number[]>([]);
-const testResults = ref<{ correct: boolean; userAnswer: number }[]>([]);
-const currentQuestionIndex = ref(0);
-const showTestResults = ref(false);
-
-// Состояние для игр
-const showGameModal = ref(false);
-const currentGame = ref('');
-
-// Используем импортированные модули
-const modules = ref(modulesData);
-
-const totalProgress = computed(() => getTotalProgress());
-
-const correctAnswersCount = computed(() => {
-  return testResults.value.filter((r) => r.correct).length;
-});
-
-const toggleModule = (moduleId: number) => {
-  const index = expandedModules.value.indexOf(moduleId);
-  if (index > -1) {
-    expandedModules.value.splice(index, 1);
-  } else {
-    expandedModules.value.push(moduleId);
-  }
-};
-
-const openLesson = (lesson: any, module: any) => {
-  console.log('Opening lesson:', lesson.title);
-  if (lesson.locked) {
-    alert('🔒 Сначала пройди предыдущие уроки!');
-    return;
-  }
-  currentLesson.value = lesson;
-  currentModule.value = module;
-  showLessonModal.value = true;
-
-  if (lesson.type === 'test') {
-    testAnswers.value = new Array(lesson.content.questions.length).fill(undefined);
-    testResults.value = [];
-    currentQuestionIndex.value = 0;
-    showTestResults.value = false;
-  } else if (lesson.type === 'practice') {
-    userCode.value = lesson.content.codePlaceholder || '';
-    codeOutput.value = '';
-  }
-};
-
-const closeLesson = () => {
-  showLessonModal.value = false;
-  currentLesson.value = null;
-  currentModule.value = null;
-  userCode.value = '';
-  codeOutput.value = '';
-  testAnswers.value = [];
-  testResults.value = [];
-  currentQuestionIndex.value = 0;
-  showTestResults.value = false;
-};
-
+// Обработчики
 const completeTheoryLesson = () => {
-  if (currentLesson.value && !currentLesson.value.completed) {
-    currentLesson.value.completed = true;
-    lastEarnedXP.value = currentLesson.value.xp;
-    showCongrats.value = true;
-
-    updateUserXP(currentLesson.value.xp);
-    unlockNextLesson(currentModule.value, currentLesson.value.id);
-
-    setTimeout(() => {
-      closeLesson();
-    }, 1500);
+  const xp = modulesStore.completeTheoryLesson();
+  if (xp > 0 && modulesStore.currentLesson.value) {
+    userStatsStore.addLessonCompleted();
+    userStatsStore.addXp(xp);
   }
-};
-
-const selectAnswer = (answerIndex: number) => {
-  testAnswers.value[currentQuestionIndex.value] = answerIndex;
-};
-
-const nextQuestion = () => {
-  if (currentQuestionIndex.value < currentLesson.value.content.questions.length - 1) {
-    currentQuestionIndex.value++;
-  }
-};
-
-const prevQuestion = () => {
-  if (currentQuestionIndex.value > 0) {
-    currentQuestionIndex.value--;
-  }
-};
-
-const submitTest = () => {
-  testResults.value = currentLesson.value.content.questions.map((q: any, idx: number) => ({
-    correct: testAnswers.value[idx] === q.correct,
-    userAnswer: testAnswers.value[idx],
-  }));
-
-  showTestResults.value = true;
 };
 
 const completeTestLesson = () => {
-  if (currentLesson.value && !currentLesson.value.completed) {
-    currentLesson.value.completed = true;
-    lastEarnedXP.value = currentLesson.value.xp;
-    showCongrats.value = true;
-
-    updateUserXP(currentLesson.value.xp);
-    unlockNextLesson(currentModule.value, currentLesson.value.id);
-
-    setTimeout(() => {
-      closeLesson();
-    }, 1500);
-  }
-};
-
-const runPracticeCode = () => {
-  try {
-    const consoleLogs: string[] = [];
-    const mockConsole = {
-      log: (...args: any[]) => {
-        consoleLogs.push(args.map((arg) => String(arg)).join(' '));
-      },
-    };
-
-    const executeCode = new Function('console', userCode.value);
-    executeCode(mockConsole);
-
-    codeOutput.value = `> Выполнение кода...\n\n📝 Вывод:\n${consoleLogs.join('\n') || '(нет вывода)'}\n\n✅ Код выполнен успешно!`;
-  } catch (error: any) {
-    codeOutput.value = `❌ Ошибка выполнения:\n${error.message}\n\n💡 Проверь синтаксис кода!`;
-  }
-};
-
-const checkPracticeTask = () => {
-  const checkFunction = currentLesson.value?.content.checkFunction;
-
-  if (checkFunction && checkFunction(userCode.value)) {
-    codeOutput.value =
-      '✅ Отлично! Задание выполнено правильно!\n\n🎉 Ты получаешь XP за прохождение урока!';
-    completePracticeLesson();
-  } else {
-    codeOutput.value =
-      '❌ Задание выполнено неверно. Попробуй ещё раз!\n\n💡 Подсказка: ' +
-      getHint(currentLesson.value?.content.task);
-  }
-};
-
-const getHint = (task: string) => {
-  if (task?.includes('myName')) {
-    return 'Создай переменную myName и выведи её через console.log(myName)';
-  }
-  if (task?.includes('цикл')) {
-    return 'Используй for или while цикл с правильными условиями';
-  }
-  if (task?.includes('возраст')) {
-    return 'Создай переменную age и используй if/else для проверки';
-  }
-  if (task?.includes('баллам')) {
-    return 'Используй if/else if/else для проверки разных диапазонов баллов';
-  }
-  return 'Проверь правильность написания кода и синтаксис';
-};
-
-const completePracticeLesson = () => {
-  if (currentLesson.value && !currentLesson.value.completed) {
-    currentLesson.value.completed = true;
-    lastEarnedXP.value = currentLesson.value.xp;
-    showCongrats.value = true;
-
-    updateUserXP(currentLesson.value.xp);
-    unlockNextLesson(currentModule.value, currentLesson.value.id);
-
-    setTimeout(() => {
-      closeLesson();
-    }, 1500);
-  }
-};
-
-const updateUserXP = (xpAmount: number) => {
-  if (authStore.user) {
-    authStore.user.xp += xpAmount;
-    const newLevel = Math.floor(authStore.user.xp / 1000) + 1;
-    if (newLevel > authStore.user.level) {
-      authStore.user.level = newLevel;
-      alert(`🎉 ПОЗДРАВЛЯЕМ! Ты достиг ${newLevel} уровня! 🎉`);
+  if (modulesStore.canCompleteTest()) {
+    const xp = modulesStore.completeTestLesson();
+    if (xp > 0 && modulesStore.currentLesson.value) {
+      userStatsStore.addLessonCompleted();
+      userStatsStore.addXp(xp);
     }
-    localStorage.setItem('user', JSON.stringify(authStore.user));
   }
 };
 
-// Методы для игр
-const openGame = (gameType: string) => {
-  currentGame.value = gameType;
-  showGameModal.value = true;
-};
-
-const closeGame = () => {
-  showGameModal.value = false;
-  currentGame.value = '';
+const handleCheckPractice = () => {
+  const xp = modulesStore.checkPracticeTask();
+  if (xp > 0 && modulesStore.currentLesson.value) {
+    userStatsStore.addLessonCompleted();
+    userStatsStore.addXp(xp);
+  }
 };
 
 const handleGameComplete = (bonusXP: number) => {
-  updateUserXP(bonusXP);
-  showGameCompleteNotification(bonusXP);
-  closeGame();
+  userStatsStore.addGameCompleted(modulesStore.currentGame.value, bonusXP);
+  modulesStore.closeGame();
 };
 
-const showGameCompleteNotification = (bonusXP: number) => {
-  const notification = document.createElement('div');
-  notification.className = 'game-complete-notification';
-  notification.innerHTML = `
-    <div class="notification-content">
-      <span class="notification-emoji">🎮</span>
-      <div>
-        <strong>Игра пройдена!</strong>
-        <p>Ты получил ${bonusXP} XP!</p>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.classList.add('show');
-  }, 100);
-
-  setTimeout(() => {
-    notification.classList.remove('show');
-    setTimeout(() => {
-      notification.remove();
-    }, 300);
-  }, 3000);
-};
+// Инициализация
+onMounted(() => {
+  modulesStore.init();
+});
 </script>
 
 <style scoped>
