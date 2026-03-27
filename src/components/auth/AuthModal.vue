@@ -79,8 +79,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { RegisterData } from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
-import type { LoginCredentials, RegisterData } from '@/types/auth';
+import type { LoginCredentials } from '@/types/auth';
 import LoginForm from './LoginForm.vue';
 import RegisterForm from './RegisterForm.vue';
 
@@ -147,7 +148,7 @@ const handleClose = () => {
   border-radius: 60px;
   padding: 40px;
   width: 90%;
-  max-width: 500px;
+  max-width: 550px;
   max-height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;

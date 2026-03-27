@@ -72,6 +72,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/children',
+    name: 'children',
+    component: () => import('@/views/Children.vue'),
+    meta: {
+      title: 'Мои дети',
+      requiresAuth: true,
+      transition: 'slide-up',
+      parentOnly: true,
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     // Перенаправляем на главную, так как у нас нет отдельной страницы 404
@@ -95,18 +106,19 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
-  // Устанавливаем заголовок страницы
   document.title = to.meta.title
     ? `${to.meta.title} | CodeCraft`
     : 'CodeCraft - Изучай программирование играя!';
 
-  // Проверка на авторизацию
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // Сохраняем путь для редиректа после входа
     next({
       path: '/',
       query: { redirect: to.fullPath },
     });
+  }
+  // Проверка, что только родитель может заходить на страницу детей
+  else if (to.meta.parentOnly && !authStore.user?.is_parent) {
+    next('/dashboard');
   } else {
     next();
   }

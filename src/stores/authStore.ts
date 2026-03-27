@@ -1,8 +1,8 @@
 // stores/authStore.ts
-import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import type { User, LoginCredentials, RegisterData } from '@/types/auth';
-import authService from '@/services/authService';
+import { defineStore } from 'pinia';
+import { authService } from '@/services/authService';
+import type { User, LoginCredentials, RegisterData } from '@/services/authService';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
@@ -10,16 +10,23 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  // Инициализация из localStorage
+  // Инициализация - проверка токена и получение пользователя
   const init = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    isLoading.value = true;
     try {
-      const savedUser = await authService.getCurrentUser();
-      if (savedUser) {
-        user.value = savedUser;
-        isAuthenticated.value = true;
-      }
+      const userData = await authService.auth();
+      user.value = userData;
+      isAuthenticated.value = true;
     } catch (err) {
       console.error('Auth init error:', err);
+      localStorage.removeItem('access_token');
+      user.value = null;
+      isAuthenticated.value = false;
+    } finally {
+      isLoading.value = false;
     }
   };
 
@@ -27,21 +34,15 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (credentials: LoginCredentials) => {
     isLoading.value = true;
     error.value = null;
-    
+
     try {
-      const loggedUser = await authService.login(credentials);
-      user.value = loggedUser;
+      const response = await authService.login(credentials);
+      user.value = response.user;
       isAuthenticated.value = true;
-      
-      // Сохраняем в localStorage
-      localStorage.setItem('user', JSON.stringify(loggedUser));
-      if (credentials.rememberMe) {
-        localStorage.setItem('auth_token', 'mock_token_' + Date.now());
-      }
-      
+      localStorage.setItem('access_token', response.token);
       return true;
     } catch (err: any) {
-      error.value = err.message || 'Ошибка при входе';
+      error.value = err.response?.data?.message || err.response?.data?.detail || 'Ошибка при входе';
       return false;
     } finally {
       isLoading.value = false;
@@ -52,16 +53,16 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (data: RegisterData) => {
     isLoading.value = true;
     error.value = null;
-    
+
     try {
-      const newUser = await authService.register(data);
-      user.value = newUser;
+      const response = await authService.register(data);
+      user.value = response.user;
       isAuthenticated.value = true;
-      
-      localStorage.setItem('user', JSON.stringify(newUser));
+      localStorage.setItem('access_token', response.token);
       return true;
     } catch (err: any) {
-      error.value = err.message || 'Ошибка при регистрации';
+      error.value =
+        err.response?.data?.message || err.response?.data?.detail || 'Ошибка при регистрации';
       return false;
     } finally {
       isLoading.value = false;
@@ -73,11 +74,12 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       await authService.logout();
-      user.value = null;
-      isAuthenticated.value = false;
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
+      localStorage.removeItem('access_token');
+      user.value = null;
+      isAuthenticated.value = false;
       isLoading.value = false;
     }
   };
@@ -96,6 +98,6 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
-    clearError
+    clearError,
   };
 });

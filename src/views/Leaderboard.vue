@@ -10,19 +10,6 @@
       <p class="page-subtitle">Соревнуйся с лучшими кодерами и поднимайся в рейтинге!</p>
     </div>
 
-    <!-- Переключение категорий -->
-    <div class="category-tabs">
-      <button
-        v-for="cat in categories"
-        :key="cat.id"
-        :class="{ active: currentCategory === cat.id }"
-        @click="currentCategory = cat.id"
-      >
-        <span class="cat-emoji">{{ cat.emoji }}</span>
-        {{ cat.name }}
-      </button>
-    </div>
-
     <!-- Топ-3 игрока -->
     <div class="top-three">
       <div
@@ -30,15 +17,13 @@
         v-if="topPlayers[1]"
       >
         <div class="medal silver">🥈</div>
-        <img
-          :src="topPlayers[1].avatar"
-          alt="Avatar"
-          class="top-avatar"
-        />
+        <div class="player-avatar-placeholder top-avatar">
+          {{ topPlayers[1].username.charAt(0).toUpperCase() }}
+        </div>
         <h3>{{ topPlayers[1].username }}</h3>
-        <p>Уровень {{ topPlayers[1].level }}</p>
+        <p>Уровень {{ getLevelByExp(topPlayers[1].exp) }}</p>
         <div class="stats">
-          <span>🏆 {{ topPlayers[1].xp }} XP</span>
+          <span>🏆 {{ topPlayers[1].exp }} XP</span>
         </div>
       </div>
 
@@ -47,15 +32,13 @@
         v-if="topPlayers[0]"
       >
         <div class="medal gold">👑</div>
-        <img
-          :src="topPlayers[0].avatar"
-          alt="Avatar"
-          class="top-avatar"
-        />
+        <div class="player-avatar-placeholder top-avatar">
+          {{ topPlayers[0].username.charAt(0).toUpperCase() }}
+        </div>
         <h3>{{ topPlayers[0].username }}</h3>
-        <p>Уровень {{ topPlayers[0].level }}</p>
+        <p>Уровень {{ getLevelByExp(topPlayers[0].exp) }}</p>
         <div class="stats">
-          <span>🏆 {{ topPlayers[0].xp }} XP</span>
+          <span>🏆 {{ topPlayers[0].exp }} XP</span>
         </div>
       </div>
 
@@ -64,15 +47,13 @@
         v-if="topPlayers[2]"
       >
         <div class="medal bronze">🥉</div>
-        <img
-          :src="topPlayers[2].avatar"
-          alt="Avatar"
-          class="top-avatar"
-        />
+        <div class="player-avatar-placeholder top-avatar">
+          {{ topPlayers[2].username.charAt(0).toUpperCase() }}
+        </div>
         <h3>{{ topPlayers[2].username }}</h3>
-        <p>Уровень {{ topPlayers[2].level }}</p>
+        <p>Уровень {{ getLevelByExp(topPlayers[2].exp) }}</p>
         <div class="stats">
-          <span>🏆 {{ topPlayers[2].xp }} XP</span>
+          <span>🏆 {{ topPlayers[2].exp }} XP</span>
         </div>
       </div>
     </div>
@@ -88,7 +69,7 @@
       </div>
 
       <div
-        v-for="(player, index) in filteredPlayers"
+        v-for="(player, index) in players"
         :key="player.id"
         class="table-row"
         :class="{ 'current-user': player.id === currentUserId }"
@@ -116,20 +97,23 @@
           >
         </div>
         <div class="player">
-          <img
-            :src="player.avatar"
-            alt="Avatar"
-            class="player-avatar"
-          />
+          <div class="player-avatar-placeholder">
+            {{ player.username.charAt(0).toUpperCase() }}
+          </div>
           <span class="player-name">{{ player.username }}</span>
           <span
             v-if="player.id === currentUserId"
             class="you-badge"
             >Ты</span
           >
+          <span
+            v-if="player.is_parent"
+            class="parent-badge"
+            >👪 Родитель</span
+          >
         </div>
         <div class="level">
-          <div class="level-badge-small"><span>🏆</span> {{ player.level }}</div>
+          <div class="level-badge-small"><span>🏆</span> {{ getLevelByExp(player.exp) }}</div>
         </div>
         <div class="xp">
           <div class="xp-bar-small">
@@ -138,13 +122,13 @@
               :style="{ width: getXPPercent(player) + '%' }"
             ></div>
           </div>
-          <span>{{ player.xp }} XP</span>
+          <span>{{ player.exp }} XP</span>
         </div>
         <div class="achievements">
           <div class="achievement-icons">
             <span
-              v-for="ach in player.achievements"
-              :key="ach"
+              v-for="(ach, idx) in getMockAchievements(player)"
+              :key="idx"
               class="achievement-icon"
               :title="ach"
             >
@@ -152,6 +136,28 @@
             </span>
           </div>
         </div>
+      </div>
+
+      <div
+        v-if="players.length === 0 && !loading"
+        class="table-row empty"
+      >
+        <div class="rank">—</div>
+        <div class="player">Нет пользователей</div>
+        <div class="level">—</div>
+        <div class="xp">—</div>
+        <div class="achievements">—</div>
+      </div>
+
+      <div
+        v-if="loading"
+        class="table-row empty"
+      >
+        <div class="rank">—</div>
+        <div class="player">Загрузка...</div>
+        <div class="level">—</div>
+        <div class="xp">—</div>
+        <div class="achievements">—</div>
       </div>
     </div>
 
@@ -161,10 +167,9 @@
       v-if="currentUser"
     >
       <div class="stats-header">
-        <img
-          :src="currentUser.avatar"
-          alt="Avatar"
-        />
+        <div class="player-avatar-placeholder large">
+          {{ currentUser.username.charAt(0).toUpperCase() }}
+        </div>
         <div>
           <h3>{{ currentUser.username }}</h3>
           <p>Твоя позиция: #{{ currentUserRank }}</p>
@@ -172,15 +177,15 @@
       </div>
       <div class="stats-grid">
         <div class="stat-item">
-          <span class="stat-value">{{ currentUser.xp }}</span>
+          <span class="stat-value">{{ currentUser.exp }}</span>
           <span class="stat-label">Всего XP</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ currentUser.level }}</span>
+          <span class="stat-value">{{ getLevelByExp(currentUser.exp) }}</span>
           <span class="stat-label">Уровень</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ currentUser.achievements?.length || 0 }}</span>
+          <span class="stat-value">{{ getMockAchievements(currentUser).length }}</span>
           <span class="stat-label">Достижений</span>
         </div>
         <div class="stat-item">
@@ -193,101 +198,81 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import type { User } from '@/services/authService';
+import { usersService } from '@/services/usersService';
 import { useAuthStore } from '@/stores/authStore';
 
 const authStore = useAuthStore();
-const currentCategory = ref('all');
+const players = ref<User[]>([]);
+const loading = ref(true);
 
-const categories = [
-  { id: 'all', name: 'Все', emoji: '🌍' },
-  { id: 'week', name: 'За неделю', emoji: '📅' },
-  { id: 'month', name: 'За месяц', emoji: '📆' },
-  { id: 'friends', name: 'Друзья', emoji: '👥' },
-];
-
-const players = ref([
-  {
-    id: 1,
-    username: 'КодоМастер',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CodeMaster',
-    level: 15,
-    xp: 15200,
-    achievements: ['Первая переменная', 'Король циклов', 'Мастер функций'],
-  },
-  {
-    id: 2,
-    username: 'ХакерКот',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=HackerCat',
-    level: 12,
-    xp: 11800,
-    achievements: ['Первая переменная', 'Король циклов'],
-  },
-  {
-    id: 3,
-    username: 'ПиксельПанда',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=PixelPanda',
-    level: 10,
-    xp: 9500,
-    achievements: ['Первая переменная', 'Король циклов'],
-  },
-  {
-    id: 4,
-    username: 'БайтБоец',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ByteFighter',
-    level: 8,
-    xp: 7200,
-    achievements: ['Первая переменная'],
-  },
-  {
-    id: 5,
-    username: 'Алгоритмик',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Algorithmic',
-    level: 7,
-    xp: 6800,
-    achievements: ['Первая переменная'],
-  },
-]);
-
-const currentUserId = computed(() => authStore.user?.id);
+// Текущий пользователь из authStore
 const currentUser = computed(() => authStore.user);
+
+const currentUserId = computed(() => currentUser.value?.id);
 
 const topPlayers = computed(() => {
   return players.value.slice(0, 3);
 });
 
-const filteredPlayers = computed(() => {
-  if (currentCategory.value === 'friends') {
-    // В реальном приложении здесь была бы фильтрация по друзьям
-    return players.value.filter((p) => p.id === currentUserId.value || Math.random() > 0.5);
-  }
-  return players.value;
-});
-
 const currentUserRank = computed(() => {
-  const index = filteredPlayers.value.findIndex((p) => p.id === currentUserId.value);
+  if (!currentUserId.value) return '?';
+  const index = players.value.findIndex((p) => p.id === currentUserId.value);
   return index !== -1 ? index + 1 : '?';
 });
 
-const completedLessons = computed(() => {
-  // В реальном приложении брать из стора
-  return 12;
-});
+const completedLessons = ref(12);
 
-const getXPPercent = (player: any) => {
-  const currentLevelXP = (player.level - 1) * 1000;
-  const nextLevelXP = player.level * 1000;
-  return ((player.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+const getLevelByExp = (exp: number): number => {
+  return Math.floor(exp / 1000) + 1;
 };
 
-const getAchievementIcon = (achievement: string) => {
+const getXPPercent = (player: User): number => {
+  const level = getLevelByExp(player.exp);
+  const currentLevelXP = (level - 1) * 1000;
+  const nextLevelXP = level * 1000;
+  return ((player.exp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+};
+
+const getMockAchievements = (player: User): string[] => {
+  const allAchievements = [
+    'Первая переменная',
+    'Король циклов',
+    'Мастер условий',
+    'Победитель бота',
+    'Социальный кодер',
+  ];
+  const count = Math.min(Math.floor(player.exp / 500) + 1, allAchievements.length);
+  return allAchievements.slice(0, count);
+};
+
+const getAchievementIcon = (achievement: string): string => {
   const icons: Record<string, string> = {
     'Первая переменная': '📦',
     'Король циклов': '🔄',
-    'Мастер функций': '⚡',
+    'Мастер условий': '🤔',
+    'Победитель бота': '🎮',
+    'Социальный кодер': '💬',
   };
   return icons[achievement] || '🏅';
 };
+
+const fetchUsers = async () => {
+  loading.value = true;
+  try {
+    const data = await usersService.getUsers();
+    players.value = data.sort((a, b) => b.exp - a.exp);
+  } catch (error) {
+    console.error('Ошибка загрузки пользователей:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchUsers();
+});
 </script>
 
 <style scoped>
@@ -309,41 +294,16 @@ const getAchievementIcon = (achievement: string) => {
   margin-bottom: 15px;
 }
 
+.title-emoji {
+  font-size: 54px;
+}
+
 .page-subtitle {
   color: rgba(255, 255, 255, 0.9);
   font-size: 18px;
 }
 
-.category-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 40px;
-}
-
-.category-tabs button {
-  padding: 12px 24px;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 50px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.category-tabs button.active {
-  background: linear-gradient(135deg, #ffd166, #ff6b6b);
-  transform: scale(1.05);
-}
-
-.cat-emoji {
-  font-size: 20px;
-}
-
+/* Топ-3 */
 .top-three {
   display: flex;
   justify-content: center;
@@ -360,6 +320,7 @@ const getAchievementIcon = (achievement: string) => {
   text-align: center;
   position: relative;
   transition: all 0.3s ease;
+  min-width: 150px;
 }
 
 .top-card.first {
@@ -381,11 +342,10 @@ const getAchievementIcon = (achievement: string) => {
 }
 
 .top-avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  border: 4px solid #ffd166;
-  margin-bottom: 15px;
+  width: 80px;
+  height: 80px;
+  margin: 15px auto;
+  font-size: 32px;
 }
 
 .top-card h3 {
@@ -398,11 +358,12 @@ const getAchievementIcon = (achievement: string) => {
   margin-bottom: 10px;
 }
 
-.stats {
+.top-card .stats {
   color: #ffd166;
   font-weight: bold;
 }
 
+/* Таблица */
 .ranking-table {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -440,6 +401,12 @@ const getAchievementIcon = (achievement: string) => {
   border-left: 4px solid #ffd166;
 }
 
+.table-row.empty {
+  justify-content: center;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .rank {
   font-weight: bold;
   font-size: 18px;
@@ -457,13 +424,33 @@ const getAchievementIcon = (achievement: string) => {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.player-avatar {
+.player-avatar-placeholder {
   width: 40px;
   height: 40px;
+  background: linear-gradient(135deg, #ffd166, #ff6b6b);
   border-radius: 50%;
-  border: 2px solid #ffd166;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: white;
+}
+
+.player-avatar-placeholder.large {
+  width: 80px;
+  height: 80px;
+  font-size: 32px;
+}
+
+.player-avatar-placeholder.top-avatar {
+  width: 80px;
+  height: 80px;
+  font-size: 32px;
+  margin: 0 auto;
 }
 
 .player-name {
@@ -477,6 +464,15 @@ const getAchievementIcon = (achievement: string) => {
   padding: 2px 8px;
   border-radius: 20px;
   font-size: 12px;
+  font-weight: bold;
+}
+
+.parent-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffd166;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
   font-weight: bold;
 }
 
@@ -518,6 +514,7 @@ const getAchievementIcon = (achievement: string) => {
 .achievement-icons {
   display: flex;
   gap: 5px;
+  flex-wrap: wrap;
 }
 
 .achievement-icon {
@@ -537,13 +534,6 @@ const getAchievementIcon = (achievement: string) => {
   align-items: center;
   gap: 20px;
   margin-bottom: 20px;
-}
-
-.stats-header img {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 3px solid #ffd166;
 }
 
 .stats-header h3 {
@@ -582,6 +572,26 @@ const getAchievementIcon = (achievement: string) => {
 }
 
 @media (max-width: 768px) {
+  .leaderboard-page {
+    padding: 15px;
+  }
+
+  .top-three {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .top-card.first {
+    order: 1;
+    transform: scale(1);
+  }
+
+  .top-card.second,
+  .top-card.third {
+    transform: scale(1);
+  }
+
   .table-header,
   .table-row {
     grid-template-columns: 60px 1fr 80px 100px 80px;
@@ -589,17 +599,24 @@ const getAchievementIcon = (achievement: string) => {
     gap: 10px;
   }
 
-  .top-three {
-    flex-direction: column;
-    align-items: center;
+  .player-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
   }
 
-  .top-card.first {
-    order: 1;
+  .achievement-icon {
+    font-size: 16px;
   }
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .you-badge,
+  .parent-badge {
+    font-size: 10px;
+    padding: 2px 6px;
   }
 }
 </style>

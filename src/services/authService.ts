@@ -1,62 +1,52 @@
 // services/authService.ts
-import type { LoginCredentials, RegisterData, User } from '@/types/auth';
+import axiosInstance from '@/api/axiosInstance';
 
-// Имитация API запросов (заменить на реальные)
-class AuthService {
-  private mockDelay = 800;
-
-  async login(credentials: LoginCredentials): Promise<User> {
-    // Имитация запроса к серверу
-    await new Promise((resolve) => setTimeout(resolve, this.mockDelay));
-
-    // В реальном приложении здесь был бы fetch/axios запрос
-    if (credentials.email === 'demo@codecraft.ru' && credentials.password === '123456') {
-      return {
-        id: '1',
-        username: 'Юный Кодер',
-        email: credentials.email,
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CodeCraft',
-        level: 5,
-        xp: 4250,
-        createdAt: new Date(),
-      };
-    }
-
-    throw new Error('Неверный email или пароль');
-  }
-
-  async register(data: RegisterData): Promise<User> {
-    await new Promise((resolve) => setTimeout(resolve, this.mockDelay));
-
-    // Проверка существования пользователя (mock)
-    if (data.email === 'existing@codecraft.ru') {
-      throw new Error('Пользователь с таким email уже существует');
-    }
-
-    return {
-      id: Date.now().toString(),
-      username: data.username,
-      email: data.email,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}`,
-      level: 1,
-      xp: 0,
-      createdAt: new Date(),
-    };
-  }
-
-  async logout(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-  }
-
-  async getCurrentUser(): Promise<User | null> {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      return JSON.parse(userStr);
-    }
-    return null;
-  }
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  exp: number;
+  is_parent: boolean;
+  children_count: number;
+  date_joined: string;
 }
 
-export default new AuthService();
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+  password_confirm: string;
+  is_parent: boolean;
+  parent_id?: number; // Добавляем опциональное поле parent_id
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export const authService = {
+  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+    const response = await axiosInstance.post('/login/', credentials);
+    return response.data;
+  },
+
+  register: async (data: RegisterData): Promise<AuthResponse> => {
+    const response = await axiosInstance.post('/register/', data);
+    return response.data;
+  },
+
+  auth: async (): Promise<User> => {
+    const response = await axiosInstance.get('/auth/');
+    return response.data;
+  },
+
+  logout: async (): Promise<void> => {
+    localStorage.removeItem('access_token');
+  },
+};

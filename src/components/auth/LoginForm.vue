@@ -143,7 +143,10 @@ const clearFieldError = (field: keyof ValidationErrors) => {
 
 const handleSubmit = () => {
   if (validateForm()) {
-    emit('submit', { ...form });
+    emit('submit', {
+      email: form.email,
+      password: form.password,
+    });
   }
 };
 

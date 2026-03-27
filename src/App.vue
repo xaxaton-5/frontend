@@ -38,7 +38,7 @@
           <div class="stats-container">
             <div class="level-badge">
               <span class="level-icon">🏆</span>
-              <span>Ур. {{ user?.level }}</span>
+              <span>Ур. {{ userLevel }}</span>
             </div>
 
             <div class="xp-container">
@@ -49,7 +49,7 @@
                 >
                   <div class="xp-glow"></div>
                 </div>
-                <span class="xp-text">{{ user?.xp }} / {{ nextLevelXP }} XP</span>
+                <span class="xp-text">{{ userExp }} / {{ nextLevelXP }} XP</span>
               </div>
             </div>
           </div>
@@ -59,11 +59,9 @@
             @click="showUserMenu = !showUserMenu"
           >
             <div class="avatar-container">
-              <img
-                :src="user?.avatar"
-                alt="Avatar"
-                class="avatar"
-              />
+              <div class="avatar-placeholder">
+                {{ userInitial }}
+              </div>
               <div class="avatar-ring"></div>
             </div>
             <span class="username">{{ user?.username }}</span>
@@ -121,10 +119,9 @@
             @click.stop
           >
             <div class="menu-header">
-              <img
-                :src="user?.avatar"
-                alt="Avatar"
-              />
+              <div class="avatar-placeholder small">
+                {{ userInitial }}
+              </div>
               <div>
                 <h4>{{ user?.username }}</h4>
                 <p>{{ user?.email }}</p>
@@ -133,6 +130,13 @@
             <div class="menu-items">
               <button @click="navigateTo('/profile')"><span>📊</span> Мой профиль</button>
               <button @click="navigateTo('/achievements')"><span>🏅</span> Мои достижения</button>
+              <!-- Пункт "Мои дети" только для родителей -->
+              <button
+                v-if="user?.is_parent"
+                @click="navigateTo('/children')"
+              >
+                <span>👨‍👩‍👧</span> Мои дети
+              </button>
               <button @click="toggleDarkMode">
                 <span>🌓</span> {{ isDarkMode ? 'Светлая тема' : 'Тёмная тема' }}
               </button>
@@ -314,6 +318,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import AuthModal from '@/components/auth/AuthModal.vue';
 import { useAuthStore } from '@/stores/authStore';
+import axiosInstance from './api/axiosInstance';
 
 const router = useRouter();
 const route = useRoute();
@@ -329,14 +334,19 @@ const dailyRewardClaimed = ref(false);
 
 const user = computed(() => authStore.user);
 
+// Вычисление уровня и XP из exp (опыт)
+const userExp = computed(() => user.value?.exp || 0);
+const userLevel = computed(() => Math.floor(userExp.value / 1000) + 1);
+const userInitial = computed(() => user.value?.username?.charAt(0).toUpperCase() || '?');
+
 const xpPercentage = computed(() => {
-  if (!user.value) return 0;
-  const levelXP = (user.value.level - 1) * 1000;
-  const nextLevelXP = user.value.level * 1000;
-  return ((user.value.xp - levelXP) / (nextLevelXP - levelXP)) * 100;
+  if (!userExp.value) return 0;
+  const levelXP = (userLevel.value - 1) * 1000;
+  const nextLevelXP = userLevel.value * 1000;
+  return ((userExp.value - levelXP) / (nextLevelXP - levelXP)) * 100;
 });
 
-const nextLevelXP = computed(() => (user.value?.level || 1) * 1000);
+const nextLevelXP = computed(() => userLevel.value * 1000);
 
 const navTabs = [
   { path: '/dashboard', name: 'Главная', emoji: '🏠' },
@@ -401,8 +411,8 @@ const claimDailyReward = () => {
   const rewardBonus = Math.floor(Math.random() * 30) + 20;
 
   if (authStore.user) {
-    authStore.user.xp += rewardXP + rewardBonus;
-    localStorage.setItem('user', JSON.stringify(authStore.user));
+    const newExp = userExp.value + rewardXP + rewardBonus;
+    authStore.user.exp = newExp;
     localStorage.setItem('dailyRewardDate', new Date().toDateString());
 
     dailyRewardClaimed.value = true;
@@ -411,9 +421,8 @@ const claimDailyReward = () => {
       'success',
     );
 
-    const newLevel = Math.floor(authStore.user.xp / 1000) + 1;
-    if (newLevel > authStore.user.level) {
-      authStore.user.level = newLevel;
+    const newLevel = Math.floor(newExp / 1000) + 1;
+    if (newLevel > userLevel.value) {
       showNotification(`🎉 ПОЗДРАВЛЯЕМ! Ты достиг ${newLevel} уровня! 🎉`, 'success');
     }
   }
@@ -547,6 +556,26 @@ onUnmounted(() => {
 </script>
 
 <style>
+.avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #ffd166, #ff6b6b);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: white;
+  border: 2px solid white;
+}
+
+.avatar-placeholder.small {
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+}
+
 * {
   margin: 0;
   padding: 0;

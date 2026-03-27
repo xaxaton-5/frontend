@@ -76,8 +76,7 @@
             class="module-progress-item"
           >
             <div class="module-info">
-              <span class="module-icon">{{ module.icon }}</span>
-              <span class="module-name">{{ module.name }}</span>
+              <span class="module-name">{{ module.title }}</span>
               <span class="module-percent">{{ module.progress }}%</span>
             </div>
             <div class="progress-bar">
@@ -209,8 +208,7 @@ const totalProgress = computed(() => getTotalProgress());
 const modulesProgress = computed(() => {
   return modules.map((m) => ({
     id: m.id,
-    name: m.title.replace(/[🚀🔄🎯]/g, '').trim(),
-    icon: m.title.charAt(0),
+    title: m.title, // полный заголовок с эмодзи
     progress: m.progress,
   }));
 });
@@ -416,10 +414,6 @@ const shareToVK = () => {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.module-icon {
-  font-size: 20px;
 }
 
 .module-name {

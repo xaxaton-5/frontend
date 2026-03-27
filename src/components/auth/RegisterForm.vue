@@ -4,21 +4,50 @@
     @submit.prevent="handleSubmit"
     class="auth-form"
   >
+    <!-- Выбор типа пользователя -->
+    <div class="form-group">
+      <label class="user-type-label">
+        <span class="label-emoji">👥</span>
+        Кто ты?
+      </label>
+      <div class="user-type-buttons">
+        <button
+          type="button"
+          class="user-type-btn"
+          :class="{ active: userType === 'child' }"
+          @click="userType = 'child'"
+        >
+          <span class="user-type-emoji">🧒</span>
+          <span>Я ребенок</span>
+        </button>
+        <button
+          type="button"
+          class="user-type-btn"
+          :class="{ active: userType === 'parent' }"
+          @click="userType = 'parent'"
+        >
+          <span class="user-type-emoji">👨‍👩‍👧</span>
+          <span>Я родитель</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Имя пользователя -->
     <div class="form-group">
       <label for="username">
         <span class="label-emoji">👤</span>
-        Имя
+        {{ userType === 'child' ? 'Имя' : 'Ваше имя' }}
       </label>
       <div class="input-wrapper">
         <input
           v-model="form.username"
           type="text"
-          placeholder="Например: КодоМастер"
+          :placeholder="userType === 'child' ? 'Например: КодоМастер' : 'Например: Анна Иванова'"
           :class="{ error: errors.username }"
           @input="clearFieldError('username')"
-          maxlength="20"
+          maxlength="30"
         />
-        <span class="input-icon">🎮</span>
+        <span class="input-icon">{{ userType === 'child' ? '🎮' : '📝' }}</span>
       </div>
       <span
         v-if="errors.username"
@@ -26,7 +55,7 @@
       >
         <span class="error-emoji">😅</span> {{ errors.username }}
       </span>
-      <div class="char-counter">{{ form.username.length }}/20</div>
+      <div class="char-counter">{{ form.username.length }}/30</div>
     </div>
 
     <div class="form-group">
@@ -114,14 +143,26 @@
       </span>
     </div>
 
+    <!-- Согласие -->
     <div class="agreement">
       <label class="checkbox">
         <input
           type="checkbox"
           v-model="agreeTerms"
         />
-        <span
-          >📜 Я согласен с правилами игры и
+        <span v-if="userType === 'child'">
+          📜 Я получил(а) разрешение от родителей и согласен с
+          <button
+            type="button"
+            class="link"
+            @click="showTerms"
+          >
+            правилами
+          </button>
+          ✨
+        </span>
+        <span v-else>
+          📜 Я согласен с правилами игры и
           <button
             type="button"
             class="link"
@@ -129,8 +170,8 @@
           >
             условиями
           </button>
-          ✨</span
-        >
+          ✨
+        </span>
       </label>
     </div>
 
@@ -139,7 +180,12 @@
       class="submit-btn"
       :disabled="loading || !agreeTerms"
     >
-      <span v-if="!loading">🎉 Стать супер-кодером! 🚀</span>
+      <span v-if="!loading"
+        >{{
+          userType === 'child' ? '🎉 Стать супер-кодером!' : '🎉 Присоединиться как родитель!'
+        }}
+        🚀</span
+      >
       <div
         v-else
         class="spinner"
@@ -156,8 +202,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
-import type { RegisterData, ValidationErrors } from '@/types/auth';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import type { RegisterData } from '@/services/authService';
+import { ValidationErrors } from '@/types/auth';
 
 const props = defineProps<{
   loading: boolean;
@@ -169,12 +217,30 @@ const emit = defineEmits<{
   'clear-error': [];
 }>();
 
-const form = reactive<RegisterData>({
+const route = useRoute();
+const userType = ref<'child' | 'parent'>('child');
+const parentId = ref<number | null>(null);
+
+// Читаем parent_id из query параметров при монтировании
+onMounted(() => {
+  const parentIdParam = route.query.parent_id;
+  if (parentIdParam) {
+    parentId.value = parseInt(parentIdParam as string);
+    // Если есть parent_id, автоматически выбираем тип "ребенок"
+    userType.value = 'child';
+  }
+});
+
+const form = reactive<{
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}>({
   username: '',
   email: '',
   password: '',
   confirmPassword: '',
-  age: 7,
 });
 
 const errors = reactive<ValidationErrors>({});
@@ -209,11 +275,11 @@ const validateForm = (): boolean => {
   const newErrors: ValidationErrors = {};
 
   if (!form.username) {
-    newErrors.username = 'Придумай крутое имя!';
-  } else if (form.username.length < 3) {
-    newErrors.username = 'Слишком короткое имя (минимум 3 буквы)';
-  } else if (form.username.length > 20) {
-    newErrors.username = 'Имя не может быть длиннее 20 символов';
+    newErrors.username = userType.value === 'child' ? 'Придумай крутое имя!' : 'Введите ваше имя';
+  } else if (form.username.length < 2) {
+    newErrors.username = 'Имя должно содержать минимум 2 символа';
+  } else if (form.username.length > 30) {
+    newErrors.username = 'Имя не может быть длиннее 30 символов';
   }
 
   if (!form.email) {
@@ -243,7 +309,20 @@ const clearFieldError = (field: keyof ValidationErrors) => {
 
 const handleSubmit = () => {
   if (validateForm() && agreeTerms.value) {
-    emit('submit', { ...form, age: 7 });
+    const submitData: RegisterData = {
+      username: form.username,
+      email: form.email,
+      password: form.password,
+      password_confirm: form.confirmPassword,
+      is_parent: userType.value === 'parent',
+    };
+
+    // Добавляем parent_id если он есть
+    if (parentId.value) {
+      submitData.parent_id = parentId.value;
+    }
+
+    emit('submit', submitData);
   }
 };
 
@@ -256,7 +335,7 @@ const showTerms = () => {
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   width: 100%;
   overflow-x: hidden;
   padding-bottom: 10px;
@@ -278,8 +357,47 @@ const showTerms = () => {
   font-size: 14px;
 }
 
+.user-type-label {
+  margin-bottom: 4px;
+}
+
 .label-emoji {
   font-size: 18px;
+}
+
+.user-type-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.user-type-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-type-btn.active {
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.3), rgba(255, 107, 107, 0.3));
+  border-color: #ffd166;
+}
+
+.user-type-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.user-type-emoji {
+  font-size: 20px;
 }
 
 .input-wrapper {
@@ -505,6 +623,15 @@ const showTerms = () => {
   .submit-btn {
     font-size: 14px;
     padding: 12px;
+  }
+
+  .user-type-btn {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .user-type-emoji {
+    font-size: 16px;
   }
 
   .strength-text {
