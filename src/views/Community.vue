@@ -29,43 +29,43 @@
       class="chat-section"
     >
       <div class="chat-container">
+        <div class="chat-header">
+          <div
+            class="connection-status"
+            :class="{ connected: chatStore.isConnected }"
+          >
+            {{ chatStore.isConnected ? '🟢 Онлайн' : '🔴 Офлайн' }}
+          </div>
+        </div>
+
         <div
           class="chat-messages"
           ref="chatMessages"
         >
           <div
-            v-for="message in messages"
+            v-for="message in chatStore.sortedMessages"
             :key="message.id"
             class="message"
-            :class="{ 'own-message': message.userId === currentUserId }"
+            :class="{ 'own-message': message.from_user === currentUserId }"
           >
-            <img
-              :src="message.avatar"
-              alt="Avatar"
-              class="message-avatar"
-            />
+            <div class="message-avatar">
+              {{ getInitials(getUsernameById(message.from_user)) }}
+            </div>
             <div class="message-content">
               <div class="message-header">
-                <span class="message-author">{{ message.username }}</span>
-                <span class="message-time">{{ message.time }}</span>
+                <span class="message-author">{{ getUsernameById(message.from_user) }}</span>
+                <span class="message-time">{{ formatTime(message.sent_date) }}</span>
               </div>
               <p class="message-text">{{ message.text }}</p>
-              <div class="message-reactions">
-                <button
-                  v-for="reaction in message.reactions"
-                  :key="reaction.emoji"
-                  class="reaction-btn"
-                >
-                  {{ reaction.emoji }} {{ reaction.count }}
-                </button>
-                <button
-                  class="add-reaction"
-                  @click="showReactionPicker(message.id)"
-                >
-                  ➕
-                </button>
-              </div>
             </div>
+          </div>
+
+          <div
+            v-if="chatStore.isLoading"
+            class="loading-messages"
+          >
+            <div class="spinner-small"></div>
+            <span>Загрузка сообщений...</span>
           </div>
         </div>
 
@@ -74,6 +74,7 @@
             v-model="newMessage"
             placeholder="Напиши сообщение... Используй эмодзи для веселья! 🎉"
             @keypress.enter.exact.prevent="sendMessage"
+            :disabled="!chatStore.isConnected"
           ></textarea>
           <div class="input-actions">
             <button
@@ -85,6 +86,7 @@
             <button
               class="send-btn"
               @click="sendMessage"
+              :disabled="!newMessage.trim() || !chatStore.isConnected"
             >
               📤 Отправить
             </button>
@@ -105,17 +107,16 @@
       </div>
 
       <div class="online-users">
-        <h3>🟢 Онлайн ({{ onlineUsers.length }})</h3>
+        <h3>🟢 Онлайн ({{ onlineUsersCount }})</h3>
         <div class="users-list">
           <div
             v-for="user in onlineUsers"
             :key="user.id"
             class="online-user"
           >
-            <img
-              :src="user.avatar"
-              alt="Avatar"
-            />
+            <div class="user-avatar-small">
+              {{ user.username.charAt(0).toUpperCase() }}
+            </div>
             <span>{{ user.username }}</span>
             <span class="online-dot-small"></span>
           </div>
@@ -299,24 +300,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import type { User } from '@/services/authService';
+import { usersService } from '@/services/usersService';
 import { useAuthStore } from '@/stores/authStore';
+import { useChatStore } from '@/stores/chatStore';
 import { useUserStatsStore } from '@/stores/userStatsStore';
 
 const authStore = useAuthStore();
 const userStatsStore = useUserStatsStore();
+const chatStore = useChatStore();
+
 const currentTab = ref('chat');
 const showEmojiPicker = ref(false);
 const showShareModal = ref(false);
 const newMessage = ref('');
 const selectedProject = ref<any>(null);
 const chatMessages = ref<HTMLElement>();
+const allUsers = ref<User[]>([]);
+const isLoadingUsers = ref(false);
 
 const shareTitle = ref('');
 const shareDescription = ref('');
 const shareCode = ref('');
 
 const currentUserId = computed(() => authStore.user?.id);
+
+// Онлайн пользователи (временно - все пользователи)
+const onlineUsers = computed(() => allUsers.value);
+const onlineUsersCount = computed(() => onlineUsers.value.length);
 
 const tabs = [
   { id: 'chat', name: 'Чат', emoji: '💬' },
@@ -325,45 +337,6 @@ const tabs = [
 ];
 
 const emojis = ['😊', '🎉', '👍', '❤️', '🔥', '🚀', '💻', '🎮', '⭐', '🏆'];
-
-const messages = ref([
-  {
-    id: 1,
-    userId: 2,
-    username: 'ХакерКот',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=HackerCat',
-    text: 'Всем привет! Только что прошёл модуль по циклам! 🎉',
-    time: '10:42',
-    reactions: [{ emoji: '👍', count: 3 }],
-  },
-  {
-    id: 2,
-    userId: 3,
-    username: 'ПиксельПанда',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=PixelPanda',
-    text: 'Круто! У меня тоже получилось! Циклы - это очень полезно 🔄',
-    time: '10:45',
-    reactions: [{ emoji: '🔥', count: 2 }],
-  },
-]);
-
-const onlineUsers = ref([
-  {
-    id: 1,
-    username: 'КодоМастер',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CodeMaster',
-  },
-  {
-    id: 2,
-    username: 'ХакерКот',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=HackerCat',
-  },
-  {
-    id: 3,
-    username: 'ПиксельПанда',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=PixelPanda',
-  },
-]);
 
 const projects = ref([
   {
@@ -402,6 +375,41 @@ const completionPercent = computed(() =>
   Math.round((userAchievementsCount.value / totalAchievements.value) * 100),
 );
 
+// Получение списка всех пользователей
+const fetchAllUsers = async () => {
+  isLoadingUsers.value = true;
+  try {
+    const data = await usersService.getUsers();
+    allUsers.value = data.sort((a, b) => b.exp - a.exp);
+  } catch (error) {
+    console.error('Ошибка загрузки пользователей:', error);
+  } finally {
+    isLoadingUsers.value = false;
+  }
+};
+
+// Получение имени пользователя по ID из стора
+const getUsernameById = (userId: number): string => {
+  const user = allUsers.value.find((u) => u.id === userId);
+  return user?.username || `Пользователь ${userId}`;
+};
+
+const getInitials = (name: string): string => {
+  return name.charAt(0).toUpperCase();
+};
+
+const formatTime = (datetime: string): string => {
+  const date = new Date(datetime);
+  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
+
+const scrollToBottom = async () => {
+  await nextTick();
+  if (chatMessages.value) {
+    chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
+  }
+};
+
 // Поделиться достижением в ВК
 const shareAchievement = (achievement: any) => {
   const shareText = `🎉 Я получил достижение "${achievement.title}" в CodeCraft! 🎉\n\n${achievement.description}\n\n🏆 +${achievement.xpReward} XP\n\nПрисоединяйся ко мне в этом увлекательном приключении! 🚀\n\n#CodeCraft #Программирование #Достижение`;
@@ -420,23 +428,10 @@ const shareAchievement = (achievement: any) => {
 const sendMessage = async () => {
   if (!newMessage.value.trim()) return;
 
-  const message = {
-    id: messages.value.length + 1,
-    userId: currentUserId.value,
-    username: authStore.user?.username || 'Ты',
-    avatar: authStore.user?.avatar || '',
-    text: newMessage.value,
-    time: new Date().toLocaleTimeString().slice(0, 5),
-    reactions: [],
-  };
-
-  messages.value.push(message);
+  await chatStore.sendMessage(newMessage.value);
   newMessage.value = '';
 
-  await nextTick();
-  if (chatMessages.value) {
-    chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
-  }
+  setTimeout(scrollToBottom, 100);
 };
 
 const addEmoji = (emoji: string) => {
@@ -478,9 +473,27 @@ const shareProject = () => {
 
   currentTab.value = 'projects';
 };
+
+// Следим за новыми сообщениями
+watch(
+  () => chatStore.messages.length,
+  () => {
+    scrollToBottom();
+  },
+);
+
+onMounted(async () => {
+  await Promise.all([chatStore.init(), fetchAllUsers()]);
+  scrollToBottom();
+});
+
+onUnmounted(() => {
+  chatStore.cleanup();
+});
 </script>
 
 <style scoped>
+/* Стили остаются без изменений */
 .community-page {
   max-width: 1400px;
   margin: 0 auto;
@@ -549,6 +562,28 @@ const shareProject = () => {
   overflow: hidden;
 }
 
+.chat-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.connection-status {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.connection-status.connected {
+  color: #6bcb77;
+}
+
+.connection-status:not(.connected) {
+  color: #ff6b6b;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -567,7 +602,15 @@ const shareProject = () => {
 .message-avatar {
   width: 40px;
   height: 40px;
+  background: linear-gradient(135deg, #ffd166, #ff6b6b);
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: white;
+  flex-shrink: 0;
 }
 
 .message-content {
@@ -593,7 +636,7 @@ const shareProject = () => {
 
 .message-author {
   font-weight: bold;
-  color: #ffd166;
+  color: white;
 }
 
 .message-time {
@@ -604,29 +647,25 @@ const shareProject = () => {
 .message-text {
   color: white;
   margin-bottom: 8px;
+  word-break: break-word;
 }
 
-.message-reactions {
+.loading-messages {
   display: flex;
-  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.reaction-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 20px;
-  padding: 2px 8px;
-  font-size: 12px;
-  cursor: pointer;
-  color: white;
-}
-
-.add-reaction {
-  background: none;
-  border: none;
-  font-size: 12px;
-  cursor: pointer;
-  opacity: 0.5;
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffd166;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 .chat-input {
@@ -647,6 +686,10 @@ const shareProject = () => {
   margin-bottom: 10px;
 }
 
+.chat-input textarea:disabled {
+  opacity: 0.5;
+}
+
 .input-actions {
   display: flex;
   justify-content: space-between;
@@ -662,6 +705,11 @@ const shareProject = () => {
   cursor: pointer;
 }
 
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .emoji-picker {
   position: absolute;
   bottom: 80px;
@@ -673,6 +721,7 @@ const shareProject = () => {
   grid-template-columns: repeat(6, 1fr);
   gap: 5px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10;
 }
 
 .emoji-picker button {
@@ -714,10 +763,18 @@ const shareProject = () => {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.online-user img {
+.user-avatar-small {
   width: 35px;
   height: 35px;
+  background: linear-gradient(135deg, #ffd166, #ff6b6b);
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  color: white;
+  flex-shrink: 0;
 }
 
 .online-user span {
@@ -917,6 +974,7 @@ const shareProject = () => {
 .project-code-preview pre {
   font-size: 10px;
   line-height: 1.3;
+  margin: 0;
 }
 
 .project-overlay {
@@ -1006,6 +1064,7 @@ const shareProject = () => {
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  position: relative;
 }
 
 .modal-close {
@@ -1017,6 +1076,76 @@ const shareProject = () => {
   font-size: 24px;
   cursor: pointer;
   color: white;
+}
+
+.project-author-modal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.project-author-modal img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.project-code-full {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.project-code-full pre {
+  margin: 0;
+  font-size: 12px;
+}
+
+.project-description {
+  margin-bottom: 20px;
+}
+
+.project-description h3 {
+  color: #ffd166;
+  margin-bottom: 8px;
+}
+
+.project-description p {
+  color: white;
+}
+
+.project-actions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.like-btn,
+.comment-btn,
+.run-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 30px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.like-btn {
+  background: rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+}
+
+.comment-btn {
+  background: rgba(255, 209, 102, 0.3);
+  color: #ffd166;
+}
+
+.run-btn {
+  background: rgba(107, 203, 119, 0.3);
+  color: #6bcb77;
 }
 
 .share-modal-content input,
@@ -1063,6 +1192,62 @@ const shareProject = () => {
   50% {
     opacity: 0.5;
     transform: scale(1.2);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .community-page {
+    padding: 15px;
+  }
+
+  .chat-section {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .online-users {
+    display: none;
+  }
+
+  .community-tabs button {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .page-title {
+    font-size: 32px;
+  }
+
+  .title-emoji {
+    font-size: 36px;
+  }
+
+  .achievements-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .achievements-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .projects-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .project-actions {
+    flex-direction: column;
   }
 }
 </style>
