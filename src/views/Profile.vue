@@ -6,10 +6,9 @@
       <div class="profile-header">
         <div class="avatar-section">
           <div class="avatar-large">
-            <img
-              :src="user?.avatar"
-              alt="Avatar"
-            />
+            <div class="avatar-placeholder">
+              {{ userInitial }}
+            </div>
             <div class="level-badge-large">{{ userStatsStore.stats.level }}</div>
           </div>
           <div class="user-info">
@@ -213,6 +212,10 @@ const modulesProgress = computed(() => {
   }));
 });
 
+const userInitial = computed(() => {
+  return user.value?.username?.charAt(0).toUpperCase() || '?';
+});
+
 const shareToVK = () => {
   const shareText = `Я изучаю программирование в CodeCraft! 🎮\n\n📊 Моя статистика:\n• Уровень: ${userStatsStore.stats.level}\n• XP: ${userStatsStore.stats.totalXp}\n• Уроков пройдено: ${userStatsStore.stats.completedLessons}/${userStatsStore.totalLessons}\n• Игр пройдено: ${userStatsStore.completedGamesCount}/${userStatsStore.totalGames}\n• Достижений: ${userStatsStore.unlockedAchievementsCount}/${userStatsStore.totalAchievements}\n\nПрисоединяйся ко мне! 🚀`;
 
@@ -257,6 +260,20 @@ const shareToVK = () => {
   flex-wrap: wrap;
 }
 
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #ffd166, #ff6b6b);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 48px;
+  color: white;
+  border: 4px solid white;
+}
+
 .avatar-large {
   position: relative;
   width: 120px;
@@ -264,11 +281,7 @@ const shareToVK = () => {
 }
 
 .avatar-large img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  border: 4px solid #ffd166;
-  object-fit: cover;
+  display: none;
 }
 
 .level-badge-large {

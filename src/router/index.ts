@@ -2,19 +2,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
-import Community from '@/views/Community.vue';
-// Импортируем существующие компоненты
-import Dashboard from '@/views/Dashboard.vue';
-import Leaderboard from '@/views/Leaderboard.vue';
-import Lessons from '@/views/Lessons.vue';
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    // Используем компонент Dashboard как главную страницу для авторизованных
-    // и показываем welcome-screen для неавторизованных
-    component: Dashboard,
+    component: () => import('@/views/Dashboard.vue'),
     meta: {
       title: 'CodeCraft - Изучай программирование играя!',
       requiresAuth: false,
@@ -24,7 +17,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: Dashboard,
+    component: () => import('@/views/Dashboard.vue'),
     meta: {
       title: 'Панель управления',
       requiresAuth: true,
@@ -34,7 +27,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/lessons',
     name: 'lessons',
-    component: Lessons,
+    component: () => import('@/views/Lessons.vue'),
     meta: {
       title: 'Уроки программирования',
       requiresAuth: true,
@@ -44,7 +37,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/leaderboard',
     name: 'leaderboard',
-    component: Leaderboard,
+    component: () => import('@/views/Leaderboard.vue'),
     meta: {
       title: 'Таблица лидеров',
       requiresAuth: true,
@@ -54,12 +47,42 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/community',
     name: 'community',
-    component: Community,
+    component: () => import('@/views/Community.vue'),
     meta: {
       title: 'Сообщество',
       requiresAuth: true,
       transition: 'fade',
     },
+    children: [
+      {
+        path: 'chat',
+        name: 'community-chat',
+        component: () => import('@/views/community/Chat.vue'),
+        meta: {
+          title: 'Чат сообщества',
+        },
+      },
+      {
+        path: 'achievements',
+        name: 'community-achievements',
+        component: () => import('@/views/community/Achievements.vue'),
+        meta: {
+          title: 'Достижения сообщества',
+        },
+      },
+      {
+        path: 'projects',
+        name: 'community-projects',
+        component: () => import('@/views/community/Projects.vue'),
+        meta: {
+          title: 'Проекты сообщества',
+        },
+      },
+      {
+        path: '',
+        redirect: '/community/chat',
+      },
+    ],
   },
   {
     path: '/profile',
@@ -85,7 +108,6 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
-    // Перенаправляем на главную, так как у нас нет отдельной страницы 404
     redirect: '/',
   },
 ];
@@ -102,7 +124,6 @@ const router = createRouter({
   },
 });
 
-// Навигационный барьер для авторизации
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
@@ -115,9 +136,7 @@ router.beforeEach(async (to, from, next) => {
       path: '/',
       query: { redirect: to.fullPath },
     });
-  }
-  // Проверка, что только родитель может заходить на страницу детей
-  else if (to.meta.parentOnly && !authStore.user?.is_parent) {
+  } else if (to.meta.parentOnly && !authStore.user?.is_parent) {
     next('/dashboard');
   } else {
     next();
