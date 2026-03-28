@@ -431,7 +431,6 @@ onUnmounted(() => {
 
 .online-user span {
   color: white;
-  flex: 1;
 }
 
 .online-dot-small {
