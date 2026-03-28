@@ -293,6 +293,10 @@ export const useUserStatsStore = defineStore('userStats', () => {
   };
 
   const addGameCompleted = (gameType: string, xpEarned: number) => {
+    if (xpEarned <= 0) {
+      return;
+    }
+
     if (!stats.value.completedGames.includes(gameType)) {
       stats.value.completedGames.push(gameType);
       stats.value.gamesCompletedThisWeek++;
@@ -321,8 +325,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
         achievement.unlocked = true;
         achievement.unlockedDate = new Date().toLocaleDateString('ru-RU');
         stats.value.unlockedAchievements.push(achievement.id);
-        stats.value.totalXp += achievement.xpReward;
-        updateDerivedStats();
         hasNewAchievement = true;
 
         const newAchievements = JSON.parse(localStorage.getItem('newAchievements') || '[]');
@@ -338,9 +340,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
 
     if (hasNewAchievement) {
       saveStats();
-      if (authStore.user) {
-        authStore.setUserXp(stats.value.totalXp);
-      }
     }
   };
 
