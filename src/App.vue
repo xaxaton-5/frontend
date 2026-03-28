@@ -266,10 +266,7 @@
             </span>
           </div>
         </div>
-        <div class="online-count">
-          <span class="online-dot"></span>
-          {{ onlineCount }} игроков онлайн
-        </div>
+
         <div class="footer-links">
           <a
             href="#"

@@ -9,6 +9,7 @@ export interface User {
   is_parent: boolean;
   children_count: number;
   date_joined: string;
+  created_at: string;
 }
 
 export interface LoginCredentials {

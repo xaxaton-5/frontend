@@ -61,7 +61,7 @@
             <h2>{{ child.username }}</h2>
             <p class="child-email">{{ child.email }}</p>
             <div class="child-stats-badge">
-              <span>📅 Регистрация: {{ formatDate(child.date_joined) }}</span>
+              <span>📅 Регистрация: {{ formatDate(child.created_at) }}</span>
             </div>
           </div>
         </div>
