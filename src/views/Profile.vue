@@ -189,20 +189,23 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { modules, getTotalProgress } from '@/data/modules';
+import { getTotalProgress } from '@/data/modules';
 import type { User } from '@/services/authService';
 import { usersService } from '@/services/usersService';
 import { useAuthStore } from '@/stores/authStore';
+import { useModulesStore } from '@/stores/modulesStore';
 import { useUserStatsStore } from '@/stores/userStatsStore';
 
 const authStore = useAuthStore();
 const userStatsStore = useUserStatsStore();
+const modulesStore = useModulesStore();
 const user = computed(() => authStore.user);
 
 const allUsers = ref<User[]>([]);
 const userRank = ref(0);
 
-const totalProgress = computed(() => getTotalProgress());
+// Используем данные из modulesStore, а не из импортированного modules
+const totalProgress = computed(() => modulesStore.totalProgress);
 
 const formattedDate = computed(() => {
   if (!user.value?.date_joined) return '—';
@@ -214,8 +217,9 @@ const formattedDate = computed(() => {
   });
 });
 
+// Прогресс по модулям - берем из modulesStore
 const modulesProgress = computed(() => {
-  return modules.map((m) => ({
+  return modulesStore.modules.map((m) => ({
     id: m.id,
     title: m.title,
     progress: m.progress,
