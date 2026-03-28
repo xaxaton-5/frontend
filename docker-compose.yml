@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000/api}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api}
       VITE_WEB_SOCKET_URL: ${VITE_WEB_SOCKET_URL:-ws://localhost:5001/ws}
     ports:
       - "80:80"
