@@ -99,3 +99,57 @@ npm run build
 ```
 npm run preview
 ```
+
+# 🔐 Тестовые пользователи
+
+В проекте присутствуют предзаполненные тестовые аккаунты. Используйте их для быстрого входа и тестирования функционала.
+
+## 📦 Начальные данные (миграции)
+
+Следующие пользователи создаются автоматически:
+
+| Email               | Пароль    |
+|--------------------|----------|
+| parent@example.com | demo12345 |
+| child@example.com  | demo12345 |
+| mentor@example.com | demo12345 |
+
+---
+
+## 🧪 Дополнительные тестовые данные
+
+Если был выполнен скрипт `populate_data`, создаются дополнительные аккаунты:
+
+### Родители
+- parent1@example.com / password123
+- parent2@example.com / password123
+- parent3@example.com / password123
+
+### Дети
+- child1@example.com / password123
+- child2@example.com / password123
+- child3@example.com / password123
+- child4@example.com / password123
+- child5@example.com / password123
+- child6@example.com / password123
+- child7@example.com / password123
+
+---
+
+## 👨‍👩‍👧‍👦 Тестовые семьи
+
+Дополнительно, функция `create_test_families()` создаёт:
+
+- ivan@family.com / password123
+- maria@family.com / password123
+- alex@family.com / password123
+- olga@family.com / password123
+
+---
+
+## ⚠️ Важно
+
+- Все указанные аккаунты предназначены **только для разработки и тестирования**.
+- Не используйте эти данные в продакшене.
+- Рекомендуется изменить или удалить тестовые учетные записи перед релизом.
+"""
