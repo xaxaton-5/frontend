@@ -468,9 +468,11 @@ const handleCheckPractice = async () => {
   }
 };
 
-const handleGameComplete = async (bonusXP: number) => {
-  await modulesStore.saveGameResultFromStore(modulesStore.currentGame, bonusXP);
-  userStatsStore.addGameCompleted(modulesStore.currentGame, bonusXP);
+const handleGameComplete = async (result: { xpEarned: number; completed: boolean }) => {
+  if (result.completed) {
+    await modulesStore.saveGameResultFromStore(modulesStore.currentGame, result.xpEarned);
+    userStatsStore.addGameCompleted(modulesStore.currentGame, result.xpEarned);
+  }
   modulesStore.closeGame();
 };
 

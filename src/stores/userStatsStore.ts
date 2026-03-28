@@ -293,6 +293,10 @@ export const useUserStatsStore = defineStore('userStats', () => {
   };
 
   const addGameCompleted = (gameType: string, xpEarned: number) => {
+    if (xpEarned <= 0) {
+      return;
+    }
+
     if (!stats.value.completedGames.includes(gameType)) {
       stats.value.completedGames.push(gameType);
       stats.value.gamesCompletedThisWeek++;
@@ -322,6 +326,7 @@ export const useUserStatsStore = defineStore('userStats', () => {
         achievement.unlockedDate = new Date().toLocaleDateString('ru-RU');
         stats.value.unlockedAchievements.push(achievement.id);
         stats.value.totalXp += achievement.xpReward;
+        stats.value.xpEarnedThisWeek += achievement.xpReward;
         updateDerivedStats();
         hasNewAchievement = true;
 

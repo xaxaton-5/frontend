@@ -156,7 +156,7 @@
 import { ref, computed } from 'vue';
 
 const emit = defineEmits<{
-  complete: [score: number];
+  complete: [result: { xpEarned: number; completed: boolean }];
 }>();
 
 const score = ref(0);
@@ -283,7 +283,7 @@ const checkAnswer = () => {
       isAttacking.value = false;
     }, 300);
 
-    score.value += 10;
+    score.value += currentTask.value.xp;
 
     if (currentLevel.value === tasks.length - 1) {
       gameWon.value = true;
@@ -296,7 +296,7 @@ const checkAnswer = () => {
     feedback.value = {
       type: 'success',
       icon: '🎉',
-      message: `ПРАВИЛЬНО! Нужно ${currentTask.value.correct} раз(а)! +10 очков!`,
+      message: `ПРАВИЛЬНО! Нужно ${currentTask.value.correct} раз(а)! +${currentTask.value.xp} XP!`,
     };
 
     setTimeout(() => {
@@ -353,7 +353,7 @@ const resetGame = () => {
 };
 
 const exitGame = () => {
-  emit('complete', finalXP.value);
+  emit('complete', { xpEarned: finalXP.value, completed: gameWon.value });
 };
 </script>
 
