@@ -10,6 +10,17 @@ export interface ChatMessage {
   text: string;
   sent_date: string;
   user?: User;
+  /** Из WebSocket `data.sender_name` */
+  sender_name?: string;
+}
+
+interface WsTextMessagePayload {
+  event: string;
+  data?: {
+    text?: string;
+    sender_name?: string;
+    sender_id?: number;
+  };
 }
 
 export const useChatStore = defineStore('chat', () => {
@@ -92,23 +103,24 @@ export const useChatStore = defineStore('chat', () => {
 
     ws.value.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        console.log('Получено сообщение от WebSocket:', data);
+        const payload = JSON.parse(event.data) as WsTextMessagePayload;
+        console.log('Получено сообщение от WebSocket:', payload);
 
-        // Новый формат сообщения:
-        // {
-        //   "text": "Мне нравится сервис, очень крутые игры🎮",
-        //   "sender_name": "Parent",
-        //   "sender_id": 5,
-        //   "type": "text_msg"
-        // }
+        if (payload.event !== 'text_message' || !payload.data) {
+          return;
+        }
 
-        // Создаем сообщение в формате ChatMessage
+        const { text, sender_id, sender_name } = payload.data;
+        if (text === undefined || sender_id === undefined) {
+          return;
+        }
+
         const newMessage: ChatMessage = {
-          id: Date.now(), // временный ID, потом заменится на реальный
-          from_user: data.sender_id,
-          text: data.text,
+          id: Date.now(),
+          from_user: sender_id,
+          text,
           sent_date: new Date().toISOString(),
+          ...(sender_name != null && sender_name !== '' ? { sender_name } : {}),
         };
 
         addMessage(newMessage);
