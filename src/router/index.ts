@@ -87,6 +87,16 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/users/:id',
+    name: 'user-profile',
+    component: () => import('@/views/UserProfile.vue'),
+    meta: {
+      title: 'Профиль участника',
+      requiresAuth: true,
+      transition: 'slide-up',
+    },
+  },
+  {
     path: '/achievements',
     name: 'achievements',
     component: () => import('@/views/Achievements.vue'),

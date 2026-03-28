@@ -21,12 +21,22 @@
           class="message"
           :class="{ 'own-message': message.from_user === currentUserId }"
         >
-          <div class="message-avatar">
+          <button
+            class="message-avatar profile-trigger"
+            type="button"
+            @click="openUserProfile(message.from_user)"
+          >
             {{ getInitials(getUsernameById(message.from_user)) }}
-          </div>
+          </button>
           <div class="message-content">
             <div class="message-header">
-              <span class="message-author">{{ getUsernameById(message.from_user) }}</span>
+              <button
+                class="message-author profile-trigger"
+                type="button"
+                @click="openUserProfile(message.from_user)"
+              >
+                {{ getUsernameById(message.from_user) }}
+              </button>
               <span class="message-time">{{ formatTime(message.sent_date) }}</span>
             </div>
             <p class="message-text">{{ message.text }}</p>
@@ -86,6 +96,11 @@
           v-for="user in onlineUsers"
           :key="user.id"
           class="online-user"
+          role="button"
+          tabindex="0"
+          @click="openUserProfile(user.id)"
+          @keydown.enter="openUserProfile(user.id)"
+          @keydown.space.prevent="openUserProfile(user.id)"
         >
           <div class="user-avatar-small">
             {{ user.username.charAt(0).toUpperCase() }}
@@ -100,11 +115,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import type { User } from '@/services/authService';
 import { usersService } from '@/services/usersService';
 import { useAuthStore } from '@/stores/authStore';
 import { useChatStore } from '@/stores/chatStore';
 
+const router = useRouter();
 const authStore = useAuthStore();
 const chatStore = useChatStore();
 
@@ -143,6 +160,15 @@ const getInitials = (name: string): string => {
 const formatTime = (datetime: string): string => {
   const date = new Date(datetime);
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
+
+const openUserProfile = (userId: number) => {
+  if (currentUserId.value === userId) {
+    router.push('/profile');
+    return;
+  }
+
+  router.push(`/users/${userId}`);
 };
 
 const scrollToBottom = async () => {
@@ -252,6 +278,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.profile-trigger {
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
 .message-content {
   flex: 1;
   background: rgba(255, 255, 255, 0.1);
@@ -276,6 +309,12 @@ onUnmounted(() => {
 .message-author {
   font-weight: bold;
   color: white;
+  background: transparent;
+}
+
+.message-author:hover,
+.message-avatar:hover {
+  opacity: 0.85;
 }
 
 .message-time {
@@ -409,6 +448,7 @@ onUnmounted(() => {
   border-radius: 10px;
   transition: background 0.3s ease;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .online-user:hover {
