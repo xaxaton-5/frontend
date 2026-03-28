@@ -73,12 +73,7 @@ export const useChatStore = defineStore('chat', () => {
   // Подключение к WebSocket
   const connectWebSocket = () => {
     const token = localStorage.getItem('access_token');
-    const wsUrl = import.meta.env.VITE_WEB_SOCKET_URL;
-
-    if (!wsUrl) {
-      console.error('VITE_WEB_SOCKET_URL не задан в .env');
-      return;
-    }
+    const wsUrl = import.meta.env.VITE_WEB_SOCKET_URL || 'ws://localhost:5001/ws';
 
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       console.log('WebSocket уже подключен');
@@ -127,10 +122,7 @@ export const useChatStore = defineStore('chat', () => {
               id: typeof p.id === 'number' ? p.id : Date.now() + wsMessageIdSeq,
               from_user: fromUser,
               text,
-              sent_date:
-                typeof p.sent_date === 'string'
-                  ? p.sent_date
-                  : new Date().toISOString(),
+              sent_date: typeof p.sent_date === 'string' ? p.sent_date : new Date().toISOString(),
             };
             addMessage(newMessage);
           }
@@ -139,10 +131,7 @@ export const useChatStore = defineStore('chat', () => {
 
         // Legacy: плоский payload или вложенный data-объект без известного event
         const payload =
-          data &&
-          typeof data.data === 'object' &&
-          data.data !== null &&
-          !Array.isArray(data.data)
+          data && typeof data.data === 'object' && data.data !== null && !Array.isArray(data.data)
             ? data.data
             : data;
 
@@ -156,9 +145,7 @@ export const useChatStore = defineStore('chat', () => {
             from_user: fromUser,
             text: legacyText,
             sent_date:
-              typeof payload.sent_date === 'string'
-                ? payload.sent_date
-                : new Date().toISOString(),
+              typeof payload.sent_date === 'string' ? payload.sent_date : new Date().toISOString(),
           });
         }
       } catch (err) {
