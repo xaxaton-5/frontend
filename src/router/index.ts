@@ -95,6 +95,16 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/achievements',
+    name: 'achievements',
+    component: () => import('@/views/Achievements.vue'),
+    meta: {
+      title: 'Мои достижения',
+      requiresAuth: true,
+      transition: 'slide-up',
+    },
+  },
+  {
     path: '/children',
     name: 'children',
     component: () => import('@/views/Children.vue'),

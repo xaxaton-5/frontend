@@ -444,7 +444,7 @@ const modulesStore = useModulesStore();
 // Обработчики
 const completeTheoryLesson = async () => {
   const xp = await modulesStore.completeTheoryLesson();
-  if (xp > 0 && modulesStore.currentLesson.value) {
+  if (xp > 0 && modulesStore.currentLesson) {
     userStatsStore.addLessonCompleted();
     userStatsStore.addXp(xp);
   }
@@ -453,7 +453,7 @@ const completeTheoryLesson = async () => {
 const completeTestLesson = async () => {
   if (modulesStore.canCompleteTest()) {
     const xp = await modulesStore.completeTestLesson();
-    if (xp > 0 && modulesStore.currentLesson.value) {
+    if (xp > 0 && modulesStore.currentLesson) {
       userStatsStore.addLessonCompleted();
       userStatsStore.addXp(xp);
     }
@@ -461,8 +461,8 @@ const completeTestLesson = async () => {
 };
 
 const handleCheckPractice = async () => {
-  const xp = modulesStore.checkPracticeTask();
-  if (xp > 0 && modulesStore.currentLesson.value) {
+  const xp = await modulesStore.checkPracticeTask();
+  if (xp > 0 && modulesStore.currentLesson) {
     userStatsStore.addLessonCompleted();
     userStatsStore.addXp(xp);
   }
@@ -475,7 +475,9 @@ const handleGameComplete = async (bonusXP: number) => {
 };
 
 onMounted(() => {
-  modulesStore.init();
+  if (!modulesStore.isLoadingResults && modulesStore.modules.length === 0) {
+    modulesStore.init();
+  }
 });
 </script>
 

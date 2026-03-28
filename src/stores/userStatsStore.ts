@@ -195,6 +195,17 @@ export const useUserStatsStore = defineStore('userStats', () => {
   });
   const nextLevelXP = computed(() => userLevel.value * 1000);
 
+  const updateDerivedStats = () => {
+    stats.value.level = Math.floor(stats.value.totalXp / 1000) + 1;
+  };
+
+  const syncXpFromAuth = () => {
+    if (authStore.user) {
+      stats.value.totalXp = authStore.user.exp;
+      updateDerivedStats();
+    }
+  };
+
   // Методы
   const loadStats = () => {
     const savedStats = localStorage.getItem('userStats');
@@ -215,14 +226,11 @@ export const useUserStatsStore = defineStore('userStats', () => {
       });
     }
 
-    // Синхронизируем с authStore
-    if (authStore.user && authStore.user.exp !== stats.value.totalXp) {
-      stats.value.totalXp = authStore.user.exp;
-      saveStats();
-    }
+    syncXpFromAuth();
 
     checkDailyStreak();
     checkWeeklyReset();
+    updateDerivedStats();
   };
 
   const saveStats = () => {
@@ -295,11 +303,10 @@ export const useUserStatsStore = defineStore('userStats', () => {
   const addXp = (xpAmount: number) => {
     stats.value.totalXp += xpAmount;
     stats.value.xpEarnedThisWeek += xpAmount;
+    updateDerivedStats();
 
-    // Синхронизируем с authStore
     if (authStore.user) {
-      authStore.user.exp = stats.value.totalXp;
-      authStore.updateUserXp(xpAmount);
+      authStore.setUserXp(stats.value.totalXp);
     }
 
     saveStats();
@@ -315,6 +322,7 @@ export const useUserStatsStore = defineStore('userStats', () => {
         achievement.unlockedDate = new Date().toLocaleDateString('ru-RU');
         stats.value.unlockedAchievements.push(achievement.id);
         stats.value.totalXp += achievement.xpReward;
+        updateDerivedStats();
         hasNewAchievement = true;
 
         const newAchievements = JSON.parse(localStorage.getItem('newAchievements') || '[]');
@@ -330,9 +338,8 @@ export const useUserStatsStore = defineStore('userStats', () => {
 
     if (hasNewAchievement) {
       saveStats();
-      // Синхронизируем с authStore
       if (authStore.user) {
-        authStore.user.exp = stats.value.totalXp;
+        authStore.setUserXp(stats.value.totalXp);
       }
     }
   };
@@ -356,13 +363,41 @@ export const useUserStatsStore = defineStore('userStats', () => {
     }
 
     checkAchievements();
+    syncXpFromAuth();
+    updateDerivedStats();
   };
 
   const syncFromAuth = (expFromAuth: number) => {
     if (stats.value.totalXp !== expFromAuth) {
       stats.value.totalXp = expFromAuth;
+      updateDerivedStats();
       saveStats();
     }
+  };
+
+  const resetStats = () => {
+    stats.value = {
+      totalXp: 0,
+      level: 1,
+      completedLessons: 0,
+      completedGames: [],
+      unlockedAchievements: [],
+      dailyStreak: 0,
+      lastLoginDate: null,
+      lessonsCompletedThisWeek: 0,
+      gamesCompletedThisWeek: 0,
+      xpEarnedThisWeek: 0,
+      weeklyResetDate: new Date().toDateString(),
+    };
+
+    allAchievements.value.forEach((achievement) => {
+      achievement.unlocked = false;
+      achievement.unlockedDate = null;
+    });
+
+    localStorage.removeItem('userStats');
+    localStorage.removeItem('userAchievements');
+    localStorage.removeItem('newAchievements');
   };
 
   return {
@@ -385,5 +420,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
     checkAchievements,
     init,
     syncFromAuth,
+    resetStats,
   };
 });

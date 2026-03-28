@@ -19,15 +19,8 @@ const initApp = async () => {
   const userStatsStore = useUserStatsStore();
   const modulesStore = useModulesStore();
 
-  // Ждем загрузки пользователя из auth
   await authStore.init();
-
-  // После загрузки пользователя, инициализируем статистику
-  // и синхронизируем exp из authStore
-  if (authStore.user) {
-    userStatsStore.syncFromAuth(authStore.user.exp);
-  }
-  await userStatsStore.init();
+  userStatsStore.init();
   await modulesStore.init();
 
   app.mount('#app');
