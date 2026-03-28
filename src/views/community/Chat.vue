@@ -184,7 +184,8 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 20px;
-  height: 600px;
+  height: calc(100vh - 280px);
+  min-height: 500px;
 }
 
 .chat-container {
@@ -194,6 +195,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
 }
 
 .chat-header {
@@ -201,6 +203,7 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .connection-status {
@@ -306,6 +309,7 @@ onUnmounted(() => {
   padding: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
+  flex-shrink: 0;
 }
 
 .chat-input textarea {
@@ -314,14 +318,14 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 15px;
-  color: white; /* белый цвет текста */
+  color: white;
   resize: none;
   font-family: inherit;
   margin-bottom: 10px;
 }
 
 .chat-input textarea::placeholder {
-  color: rgba(255, 255, 255, 0.5); /* цвет плейсхолдера */
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .chat-input textarea:disabled {
@@ -375,14 +379,21 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
   border-radius: 30px;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 .online-users h3 {
   color: white;
   margin-bottom: 15px;
+  flex-shrink: 0;
 }
 
 .users-list {
+  flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -395,6 +406,7 @@ onUnmounted(() => {
   padding: 8px;
   border-radius: 10px;
   transition: background 0.3s ease;
+  flex-shrink: 0;
 }
 
 .online-user:hover {
@@ -460,11 +472,42 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .chat-section {
     grid-template-columns: 1fr;
-    height: auto;
+    height: calc(100vh - 200px);
   }
 
   .online-users {
     display: none;
   }
+}
+
+/* Кастомный скроллбар */
+.chat-messages::-webkit-scrollbar,
+.users-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat-messages::-webkit-scrollbar-track,
+.users-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb,
+.users-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover,
+.users-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Для Firefox */
+.chat-messages,
+.users-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.08);
 }
 </style>
