@@ -233,7 +233,7 @@ const userInitial = computed(() => {
 const fetchUsersAndRank = async () => {
   try {
     const data = await usersService.getUsers();
-    const sortedUsers = [...data].sort((a, b) => b.exp - a.exp);
+    const sortedUsers = [...data].filter((user) => !user.is_parent).sort((a, b) => b.exp - a.exp);
     allUsers.value = sortedUsers;
 
     const currentUserId = authStore.user?.id;

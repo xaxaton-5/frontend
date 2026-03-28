@@ -262,7 +262,7 @@ const fetchUsers = async () => {
   loading.value = true;
   try {
     const data = await usersService.getUsers();
-    players.value = data.sort((a, b) => b.exp - a.exp);
+    players.value = data.filter((user) => !user.is_parent).sort((a, b) => b.exp - a.exp);
   } catch (error) {
     console.error('Ошибка загрузки пользователей:', error);
   } finally {
