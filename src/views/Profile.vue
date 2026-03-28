@@ -149,16 +149,38 @@
       </div>
 
       <!-- Активность -->
+      <!-- Активность -->
       <div class="section-card">
         <div class="section-header">
           <h2>📊 Активность</h2>
           <span class="activity-badge">За последние 7 дней</span>
         </div>
-        <div class="activity-grid">
-          <div class="activity-stat">
-            <span class="activity-value">{{ userStatsStore.stats.dailyStreak }}</span>
-            <span class="activity-label">Дней подряд</span>
+
+        <!-- Стрик в виде звездочек -->
+        <div class="streak-container">
+          <div class="streak-title">
+            <span class="streak-icon">🔥</span>
+            <span class="streak-count">{{ userStatsStore.stats.dailyStreak }} дней подряд!</span>
           </div>
+          <div class="streak-stars">
+            <div
+              v-for="day in 7"
+              :key="day"
+              class="streak-star"
+              :class="{
+                active: day <= userStatsStore.stats.dailyStreak,
+                inactive: day > userStatsStore.stats.dailyStreak,
+              }"
+            >
+              <span class="star-icon">{{
+                day <= userStatsStore.stats.dailyStreak ? '⭐' : '☆'
+              }}</span>
+              <span class="star-day">{{ getDayName(day) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="activity-grid">
           <div class="activity-stat">
             <span class="activity-value">{{ userStatsStore.stats.lessonsCompletedThisWeek }}</span>
             <span class="activity-label">Уроков за неделю</span>
@@ -244,6 +266,19 @@ const fetchUsersAndRank = async () => {
   } catch (error) {
     console.error('Ошибка загрузки пользователей:', error);
   }
+};
+
+const getDayName = (day: number): string => {
+  const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+  const today = new Date().getDay(); // 0 - воскресенье, 1 - понедельник, ...
+  // Преобразуем воскресенье в индекс 6 для нашего массива
+  const todayIndex = today === 0 ? 6 : today - 1;
+
+  // Вычисляем индекс для каждого дня (1-7)
+  let targetIndex = (todayIndex - (7 - day)) % 7;
+  if (targetIndex < 0) targetIndex += 7;
+
+  return days[targetIndex];
 };
 
 const shareToVK = () => {
@@ -550,10 +585,106 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* Активность */
+/* Стрик */
+.streak-container {
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.15), rgba(255, 107, 107, 0.15));
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.streak-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.streak-icon {
+  font-size: 28px;
+  animation: flameFlicker 1s infinite;
+}
+
+.streak-count {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffd166;
+  text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
+}
+
+.streak-stars {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.streak-star {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.3s ease;
+}
+
+.streak-star.active {
+  animation: starPop 0.5s ease;
+}
+
+.star-icon {
+  font-size: 32px;
+  transition: all 0.3s ease;
+}
+
+.streak-star.active .star-icon {
+  text-shadow: 0 0 10px #ffd166;
+  transform: scale(1.1);
+}
+
+.streak-star.inactive .star-icon {
+  opacity: 0.4;
+  filter: grayscale(0.3);
+}
+
+.star-day {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.streak-star.active .star-day {
+  color: #ffd166;
+}
+
+@keyframes flameFlicker {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+
+@keyframes starPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Обновляем activity-grid, убираем лишний элемент */
 .activity-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
