@@ -22,7 +22,9 @@
           </div>
           <div class="user-info">
             <h1>{{ profileUser.username }}</h1>
-            <p class="user-email">{{ profileUser.is_parent ? 'Родитель' : 'Участник сообщества' }}</p>
+            <p class="user-email">
+              {{ profileUser.is_parent ? 'Родитель' : 'Участник сообщества' }}
+            </p>
             <p
               v-if="profileUser.guild_name"
               class="guild-name"
@@ -32,7 +34,9 @@
             <div class="user-stats-badge">
               <span>📅 Регистрация: {{ formattedDate }}</span>
               <span v-if="userRank > 0">🏆 Рейтинг: #{{ userRank }}</span>
-              <span>{{ profileUser.is_parent ? '👨‍👩‍👧 Аккаунт родителя' : '🎮 Детский аккаунт' }}</span>
+              <span>{{
+                profileUser.is_parent ? '👨‍👩‍👧 Аккаунт родителя' : '🎮 Детский аккаунт'
+              }}</span>
             </div>
           </div>
         </div>
@@ -53,7 +57,10 @@
             <span class="stat-label">Уровень</span>
           </div>
         </div>
-        <div class="stat-card">
+        <div
+          class="stat-card"
+          v-if="profileUser.is_parent"
+        >
           <div class="stat-icon">👨‍👩‍👧</div>
           <div class="stat-info">
             <span class="stat-value">{{ profileUser.children_count }}</span>
@@ -388,7 +395,9 @@ watch(() => route.params.id, loadUserProfile);
   text-decoration: none;
   color: white;
   background: linear-gradient(135deg, #ffd166, #ff6b6b);
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .action-btn:hover {

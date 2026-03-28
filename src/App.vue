@@ -130,8 +130,18 @@
               </div>
             </div>
             <div class="menu-items">
-              <button @click="navigateTo('/profile')"><span>📊</span> Мой профиль</button>
-              <button @click="navigateTo('/achievements')"><span>🏅</span> Мои достижения</button>
+              <button
+                v-if="!user?.is_parent"
+                @click="navigateTo('/profile')"
+              >
+                <span>📊</span> Мой профиль
+              </button>
+              <button
+                v-if="!user?.is_parent"
+                @click="navigateTo('/achievements')"
+              >
+                <span>🏅</span> Мои достижения
+              </button>
               <!-- Пункт "Мои дети" только для родителей -->
               <button
                 v-if="user?.is_parent"
@@ -338,12 +348,20 @@ const dailyRewardClaimed = ref(false);
 const user = computed(() => authStore.user);
 const userInitial = computed(() => user.value?.username?.charAt(0).toUpperCase() || '?');
 
-const navTabs = [
-  { path: '/dashboard', name: 'Главная', emoji: '🏠' },
-  { path: '/lessons', name: 'Уроки', emoji: '📚' },
-  { path: '/leaderboard', name: 'Рейтинг', emoji: '🏆' },
-  { path: '/community', name: 'Сообщество', emoji: '👥' },
-];
+const navTabs = computed(() => {
+  return [
+    { path: '/dashboard', name: 'Главная', emoji: '🏠' },
+    { path: '/lessons', name: 'Уроки', emoji: '📚' },
+    { path: '/leaderboard', name: 'Рейтинг', emoji: '🏆' },
+    { path: '/community', name: 'Сообщество', emoji: '👥' },
+  ].filter((tab) => {
+    if (authStore.user?.is_parent) {
+      if (tab.name === 'Уроки') return false;
+      return true;
+    }
+    return true;
+  });
+});
 
 // Проверка возможности получения награды
 const checkDailyReward = () => {

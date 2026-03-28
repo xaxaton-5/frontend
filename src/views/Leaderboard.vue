@@ -9,9 +9,13 @@
       </h1>
       <p class="page-subtitle">Соревнуйся с лучшими кодерами и поднимайся в рейтинге!</p>
     </div>
-    <div style="text-align: center;">
+    <div style="text-align: center">
       <div class="mascot-container">
-        <img :src="mascotImage" alt="Робот-маскот" class="mascot-image" />
+        <img
+          :src="mascotImage"
+          alt="Робот-маскот"
+          class="mascot-image"
+        />
         <div class="speech-bubble">Ты тоже можешь стать звездочкой!</div>
       </div>
     </div>
@@ -196,7 +200,7 @@
     <!-- Статистика пользователя -->
     <div
       class="user-stats-card"
-      v-if="currentUser"
+      v-if="currentUser && !currentUser.is_parent""
     >
       <div class="stats-header">
         <div class="player-avatar-placeholder large">
@@ -236,8 +240,8 @@
 </template>
 
 <script setup lang="ts">
-import mascotImage from '@/assets/images/3.png'
 import { ref, computed, onMounted } from 'vue';
+import mascotImage from '@/assets/images/3.png';
 import type { User } from '@/services/authService';
 import { usersService } from '@/services/usersService';
 import { useAuthStore } from '@/stores/authStore';
@@ -705,7 +709,7 @@ onMounted(() => {
   color: #5a3e2b;
   font-weight: bold;
   white-space: nowrap;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .speech-bubble::after {
