@@ -67,6 +67,14 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'guilds',
+        name: 'community-guilds',
+        component: () => import('@/views/community/Guilds.vue'),
+        meta: {
+          title: 'Сообщества гильдии',
+        },
+      },
+      {
         path: 'achievements',
         name: 'community-achievements',
         component: () => import('@/views/community/Achievements.vue'),
