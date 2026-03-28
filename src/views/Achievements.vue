@@ -9,6 +9,12 @@
       </h1>
       <p class="page-subtitle">Собирай достижения и становись настоящим мастером кода!</p>
     </div>
+    <div style="text-align: center;">
+      <div class="mascot-container">
+        <img :src="mascotImage" alt="Робот-маскот" class="mascot-image" />
+        <div class="speech-bubble">Все твои достижения не будут забыты</div>
+      </div>
+    </div>
 
     <div class="achievements-stats">
       <div class="stat-card">
@@ -63,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import mascotImage from '@/assets/images/9.png'
 import { computed } from 'vue';
 import { useUserStatsStore } from '@/stores/userStatsStore';
 
@@ -263,5 +270,40 @@ const shareAchievement = (achievement: any) => {
   .title-emoji {
     font-size: 36px;
   }
+}
+
+.mascot-container {
+  position: relative;
+  display: inline-block;
+  margin: 20px 0;
+}
+
+.mascot-image {
+  width: 150px;
+  height: auto;
+  animation: bounce 2s infinite;
+}
+
+.speech-bubble {
+  position: absolute;
+  top: -30px;
+  right: -50px;
+  background: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  color: #5a3e2b;
+  font-weight: bold;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 20px;
+  border-width: 8px 8px 0 8px;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
 }
 </style>
