@@ -33,7 +33,6 @@
 const tabs = [
   { path: '/community/chat', name: 'Чат', emoji: '💬' },
   { path: '/community/achievements', name: 'Достижения', emoji: '🏅' },
-  { path: '/community/projects', name: 'Проекты', emoji: '🎨' },
 ];
 </script>
 

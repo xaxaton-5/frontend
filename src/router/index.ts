@@ -74,14 +74,6 @@ const routes: RouteRecordRaw[] = [
           title: 'Достижения сообщества',
         },
       },
-      {
-        path: 'projects',
-        name: 'community-projects',
-        component: () => import('@/views/community/Projects.vue'),
-        meta: {
-          title: 'Проекты сообщества',
-        },
-      },
     ],
   },
   {
