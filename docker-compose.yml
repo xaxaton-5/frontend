@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api.privetilya.online/api}
-        VITE_WEB_SOCKET_URL: ${VITE_WEB_SOCKET_URL:-wss://ws.privetilya.online}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000/api}
+        VITE_WEB_SOCKET_URL: ${VITE_WEB_SOCKET_URL:-ws://localhost:5001/ws}
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     restart: unless-stopped

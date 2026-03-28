@@ -1,36 +1,35 @@
-## Инструкция по деплою с помощью Docker
+## Быстрый локальный запуск одной командой
 
-**1. Клонировать репозиторий**
+По умолчанию фронтенд теперь использует локальные адреса:
 
-```
-git clone https://github.com/xaxaton-5/frontend
-```
+- API: `http://localhost:5000/api`
+- WebSocket: `ws://localhost:5001/ws`
 
-**2. Перейти в папку с проектом**
+Если ваш backend слушает эти адреса, достаточно одной команды:
 
-```
-cd frontend
-```
-
-**3. Задать переменные окружения**
-
-Создать .env в корне по примеру из .env.template (поменять VITE_API_BASE_URL и VITE_WEB_SOCKET_URL, если требуется другой url до api):
-
-**4. Собрать Docker-образ (вместо xaxaton-team-4-frontend может быть ваше название)**
-
-```
-docker build -t xaxaton-team-4-frontend .
+```bash
+docker compose up --build
 ```
 
-**5. Запустить контейнер**
+После этого приложение будет доступно по адресу `http://localhost:8080`.
 
+## Запуск Docker с другими адресами
+
+Если backend работает не на локальных адресах по умолчанию, можно переопределить их через `.env` в корне проекта:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+VITE_WEB_SOCKET_URL=ws://localhost:5001/ws
+FRONTEND_PORT=8080
 ```
-docker run -p 80:80 xaxaton-team-4-frontend
+
+Потом снова запустить:
+
+```bash
+docker compose up --build
 ```
 
-**6. Теперь приложение доступно по адресу http://localhost**
-
-## Инструкция по деплою без использования Docker
+## Запуск без Docker
 
 **1. Установить node.js 22**
 
@@ -52,24 +51,31 @@ cd frontend
 
 **4. Установить зависимости**
 
-```
+```bash
 npm i
 ```
 
-**5. Задать переменные окружения**
+**5. Запустить проект**
 
-Создать .env в корне по примеру из .env.template (поменять VITE_API_BASE_URL и VITE_WEB_SOCKET_URL, если требуется другой url до api):
-
-**6. Собрать проект**
-
+```bash
+npm run dev
 ```
+
+Без `.env` фронтенд будет обращаться к локальному backend на:
+
+- `http://localhost:5000/api`
+- `ws://localhost:5001/ws`
+
+Если нужны другие адреса, создайте `.env` по примеру из `.env.example` или `.env.template`.
+
+**6. Сборка production**
+
+```bash
 npm run build
 ```
 
-**7. В папке dist файлы проекта для дальнейшего деплоя**
+**7. Просмотр production-сборки локально**
 
-**8. Чтобы посмотреть собранный проект локально**
-
-```
+```bash
 npm run preview
 ```

@@ -73,12 +73,7 @@ export const useChatStore = defineStore('chat', () => {
   // Подключение к WebSocket
   const connectWebSocket = () => {
     const token = localStorage.getItem('access_token');
-    const wsUrl = import.meta.env.VITE_WEB_SOCKET_URL;
-
-    if (!wsUrl) {
-      console.error('VITE_WEB_SOCKET_URL не задан в .env');
-      return;
-    }
+    const wsUrl = import.meta.env.VITE_WEB_SOCKET_URL || 'ws://localhost:5001/ws';
 
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       console.log('WebSocket уже подключен');

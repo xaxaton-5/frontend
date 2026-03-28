@@ -1,7 +1,7 @@
 FROM node:22 AS build
 
-ARG VITE_API_BASE_URL=https://api.privetilya.online/api
-ARG VITE_WEB_SOCKET_URL=wss://ws.privetilya.online
+ARG VITE_API_BASE_URL=http://localhost:5000/api
+ARG VITE_WEB_SOCKET_URL=ws://localhost:5001/ws
 
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WEB_SOCKET_URL=$VITE_WEB_SOCKET_URL
