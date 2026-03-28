@@ -13,6 +13,8 @@ export interface ChatMessage {
 }
 
 export const useChatStore = defineStore('chat', () => {
+  let wsMessageIdSeq = 0;
+
   // Состояние
   const messages = ref<ChatMessage[]>([]);
   const isLoading = ref(false);
@@ -96,12 +98,46 @@ export const useChatStore = defineStore('chat', () => {
         const data = JSON.parse(event.data);
         console.log('Получено сообщение от WebSocket:', data);
 
+        // { "event": "user_list_changed", "data": [ User, ... ] }
         if (data.event === 'user_list_changed' && Array.isArray(data.data)) {
           onlineUsers.value = [...data.data].sort((a: User, b: User) => b.exp - a.exp);
           return;
         }
 
-        // Сообщение может быть плоским или в обёртке { event, data } (как user_list_changed)
+        // { "event": "text_message", "data": { text, sender_name, sender_id } }
+        if (
+          data.event === 'text_message' &&
+          data.data &&
+          typeof data.data === 'object' &&
+          !Array.isArray(data.data)
+        ) {
+          const p = data.data as {
+            text?: string;
+            sender_id?: number;
+            sender_name?: string;
+            id?: number;
+            sent_date?: string;
+            from_user?: number;
+          };
+          const fromUser = p.sender_id ?? p.from_user;
+          const text = p.text;
+          if (fromUser != null && text != null) {
+            wsMessageIdSeq += 1;
+            const newMessage: ChatMessage = {
+              id: typeof p.id === 'number' ? p.id : Date.now() + wsMessageIdSeq,
+              from_user: fromUser,
+              text,
+              sent_date:
+                typeof p.sent_date === 'string'
+                  ? p.sent_date
+                  : new Date().toISOString(),
+            };
+            addMessage(newMessage);
+          }
+          return;
+        }
+
+        // Legacy: плоский payload или вложенный data-объект без известного event
         const payload =
           data &&
           typeof data.data === 'object' &&
@@ -111,19 +147,19 @@ export const useChatStore = defineStore('chat', () => {
             : data;
 
         const fromUser = payload.from_user ?? payload.sender_id;
-        const text = payload.text;
+        const legacyText = payload.text;
 
-        if (fromUser != null && text != null) {
-          const newMessage: ChatMessage = {
-            id: typeof payload.id === 'number' ? payload.id : Date.now(),
+        if (fromUser != null && legacyText != null) {
+          wsMessageIdSeq += 1;
+          addMessage({
+            id: typeof payload.id === 'number' ? payload.id : Date.now() + wsMessageIdSeq,
             from_user: fromUser,
-            text,
+            text: legacyText,
             sent_date:
               typeof payload.sent_date === 'string'
                 ? payload.sent_date
                 : new Date().toISOString(),
-          };
-          addMessage(newMessage);
+          });
         }
       } catch (err) {
         console.error('Ошибка парсинга WebSocket сообщения:', err);
