@@ -1,7 +1,8 @@
 // api/axiosInstance.ts
 import axios from 'axios';
+import { appConfig } from '@/config/env';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const baseURL = appConfig.apiBaseUrl;
 
 const axiosInstance = axios.create({
   baseURL,

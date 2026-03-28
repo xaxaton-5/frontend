@@ -14,7 +14,7 @@ cd frontend
 
 **3. Задать переменные окружения**
 
-Создать .env в корне по примеру из .env.template (поменять VITE_API_BASE_URL и VITE_WEB_SOCKET_URL, если требуется другой url до api):
+Создать `.env` в корне по примеру из `.env.template` или передать `VITE_API_BASE_URL` и `VITE_WEB_SOCKET_URL` через переменные Docker/Portainer stack. Для контейнера эти значения читаются при старте, без пересборки образа.
 
 **4. Запустить контейнер**
 
@@ -40,7 +40,7 @@ cd frontend
 
 **3. Задать переменные окружения**
 
-Создать .env в корне по примеру из .env.template (поменять VITE_API_BASE_URL и VITE_WEB_SOCKET_URL, если требуется другой url до api):
+Создать `.env` в корне по примеру из `.env.template` или передать `VITE_API_BASE_URL` и `VITE_WEB_SOCKET_URL` через переменные Docker/Portainer stack. Для контейнера эти значения читаются при старте, без пересборки образа.
 
 **4. Собрать Docker-образ (вместо xaxaton-team-4-frontend может быть ваше название)**
 
@@ -84,7 +84,7 @@ npm i
 
 **5. Задать переменные окружения**
 
-Создать .env в корне по примеру из .env.template (поменять VITE_API_BASE_URL и VITE_WEB_SOCKET_URL, если требуется другой url до api):
+Создать `.env` в корне по примеру из `.env.template` (для локальной разработки и сборки без Docker).
 
 **6. Собрать проект**
 

@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import axiosInstance from '@/api/axiosInstance';
+import { appConfig } from '@/config/env';
 import type { User } from '@/services/authService';
 
 export interface ChatMessage {
@@ -73,7 +74,7 @@ export const useChatStore = defineStore('chat', () => {
   // Подключение к WebSocket
   const connectWebSocket = () => {
     const token = localStorage.getItem('access_token');
-    const wsUrl = import.meta.env.VITE_WEB_SOCKET_URL;
+    const wsUrl = appConfig.webSocketUrl;
 
     if (!wsUrl) {
       console.error('VITE_WEB_SOCKET_URL не задан в .env');
