@@ -40,6 +40,7 @@
 import mascotImage from '@/assets/images/4.png'
 const tabs = [
   { path: '/community/chat', name: 'Чат', emoji: '💬' },
+  { path: '/community/guilds', name: 'Гильдии', emoji: '🛡️' },
   { path: '/community/achievements', name: 'Достижения', emoji: '🏅' },
 ];
 </script>
