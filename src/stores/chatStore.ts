@@ -10,17 +10,6 @@ export interface ChatMessage {
   text: string;
   sent_date: string;
   user?: User;
-  /** Из WebSocket `data.sender_name` */
-  sender_name?: string;
-}
-
-interface WsTextMessagePayload {
-  event: string;
-  data?: {
-    text?: string;
-    sender_name?: string;
-    sender_id?: number;
-  };
 }
 
 export const useChatStore = defineStore('chat', () => {
@@ -30,6 +19,7 @@ export const useChatStore = defineStore('chat', () => {
   const error = ref<string | null>(null);
   const ws = ref<WebSocket | null>(null);
   const isConnected = ref(false);
+  const onlineUsers = ref<User[]>([]);
 
   // Геттеры
   const messagesCount = computed(() => messages.value.length);
@@ -103,27 +93,30 @@ export const useChatStore = defineStore('chat', () => {
 
     ws.value.onmessage = (event) => {
       try {
-        const payload = JSON.parse(event.data) as WsTextMessagePayload;
-        console.log('Получено сообщение от WebSocket:', payload);
+        const data = JSON.parse(event.data);
+        console.log('Получено сообщение от WebSocket:', data);
 
-        if (payload.event !== 'text_message' || !payload.data) {
+        if (data.event === 'user_list_changed' && Array.isArray(data.data)) {
+          onlineUsers.value = [...data.data].sort((a: User, b: User) => b.exp - a.exp);
           return;
         }
 
-        const { text, sender_id, sender_name } = payload.data;
-        if (text === undefined || sender_id === undefined) {
-          return;
+        // Текстовое сообщение:
+        // {
+        //   "text": "...",
+        //   "sender_name": "Parent",
+        //   "sender_id": 5,
+        //   "type": "text_msg"
+        // }
+        if (data.sender_id != null && data.text != null) {
+          const newMessage: ChatMessage = {
+            id: Date.now(),
+            from_user: data.sender_id,
+            text: data.text,
+            sent_date: new Date().toISOString(),
+          };
+          addMessage(newMessage);
         }
-
-        const newMessage: ChatMessage = {
-          id: Date.now(),
-          from_user: sender_id,
-          text,
-          sent_date: new Date().toISOString(),
-          ...(sender_name != null && sender_name !== '' ? { sender_name } : {}),
-        };
-
-        addMessage(newMessage);
       } catch (err) {
         console.error('Ошибка парсинга WebSocket сообщения:', err);
       }
@@ -154,6 +147,7 @@ export const useChatStore = defineStore('chat', () => {
       ws.value.close();
       ws.value = null;
       isConnected.value = false;
+      onlineUsers.value = [];
     }
   };
 
@@ -179,6 +173,7 @@ export const useChatStore = defineStore('chat', () => {
     isLoading,
     error,
     isConnected,
+    onlineUsers,
 
     // Геттеры
     messagesCount,

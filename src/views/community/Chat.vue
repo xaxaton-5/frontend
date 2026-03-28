@@ -22,11 +22,11 @@
           :class="{ 'own-message': message.from_user === currentUserId }"
         >
           <div class="message-avatar">
-            {{ getInitials(displayName(message)) }}
+            {{ getInitials(getUsernameById(message.from_user)) }}
           </div>
           <div class="message-content">
             <div class="message-header">
-              <span class="message-author">{{ displayName(message) }}</span>
+              <span class="message-author">{{ getUsernameById(message.from_user) }}</span>
               <span class="message-time">{{ formatTime(message.sent_date) }}</span>
             </div>
             <p class="message-text">{{ message.text }}</p>
@@ -103,7 +103,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import type { User } from '@/services/authService';
 import { usersService } from '@/services/usersService';
 import { useAuthStore } from '@/stores/authStore';
-import { useChatStore, type ChatMessage } from '@/stores/chatStore';
+import { useChatStore } from '@/stores/chatStore';
 
 const authStore = useAuthStore();
 const chatStore = useChatStore();
@@ -115,7 +115,7 @@ const allUsers = ref<User[]>([]);
 
 const currentUserId = computed(() => authStore.user?.id);
 
-const onlineUsers = computed(() => allUsers.value);
+const onlineUsers = computed(() => chatStore.onlineUsers);
 const onlineUsersCount = computed(() => onlineUsers.value.length);
 
 const emojis = ['😊', '🎉', '👍', '❤️', '🔥', '🚀', '💻', '🎮', '⭐', '🏆'];
@@ -130,12 +130,11 @@ const fetchAllUsers = async () => {
 };
 
 const getUsernameById = (userId: number): string => {
+  const fromOnline = chatStore.onlineUsers.find((u) => u.id === userId);
+  if (fromOnline) return fromOnline.username;
   const user = allUsers.value.find((u) => u.id === userId);
   return user?.username || `Пользователь ${userId}`;
 };
-
-const displayName = (message: ChatMessage): string =>
-  message.sender_name ?? getUsernameById(message.from_user);
 
 const getInitials = (name: string): string => {
   return name.charAt(0).toUpperCase();
