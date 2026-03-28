@@ -430,32 +430,29 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import ConditionsGame from '@/components/games/ConditionsGame.vue';
 import LoopsGame from '@/components/games/LoopsGame.vue';
 import VariableGame from '@/components/games/VariableGame.vue';
-import { useAuthStore } from '@/stores/authStore';
 import { useModulesStore } from '@/stores/modulesStore';
 import { useUserStatsStore } from '@/stores/userStatsStore';
 
-const authStore = useAuthStore();
 const userStatsStore = useUserStatsStore();
 const modulesStore = useModulesStore();
 
 // Обработчики
-const completeTheoryLesson = () => {
-  const xp = modulesStore.completeTheoryLesson();
+const completeTheoryLesson = async () => {
+  const xp = await modulesStore.completeTheoryLesson();
   if (xp > 0 && modulesStore.currentLesson.value) {
     userStatsStore.addLessonCompleted();
     userStatsStore.addXp(xp);
   }
 };
 
-const completeTestLesson = () => {
+const completeTestLesson = async () => {
   if (modulesStore.canCompleteTest()) {
-    const xp = modulesStore.completeTestLesson();
+    const xp = await modulesStore.completeTestLesson();
     if (xp > 0 && modulesStore.currentLesson.value) {
       userStatsStore.addLessonCompleted();
       userStatsStore.addXp(xp);
@@ -463,7 +460,7 @@ const completeTestLesson = () => {
   }
 };
 
-const handleCheckPractice = () => {
+const handleCheckPractice = async () => {
   const xp = modulesStore.checkPracticeTask();
   if (xp > 0 && modulesStore.currentLesson.value) {
     userStatsStore.addLessonCompleted();
@@ -471,12 +468,12 @@ const handleCheckPractice = () => {
   }
 };
 
-const handleGameComplete = (bonusXP: number) => {
-  userStatsStore.addGameCompleted(modulesStore.currentGame.value, bonusXP);
+const handleGameComplete = async (bonusXP: number) => {
+  await modulesStore.saveGameResultFromStore(modulesStore.currentGame, bonusXP);
+  userStatsStore.addGameCompleted(modulesStore.currentGame, bonusXP);
   modulesStore.closeGame();
 };
 
-// Инициализация
 onMounted(() => {
   modulesStore.init();
 });

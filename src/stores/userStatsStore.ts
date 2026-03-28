@@ -2,17 +2,7 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { modules } from '@/data/modules';
-
-export interface Achievement {
-  id: number;
-  title: string;
-  description: string;
-  icon: string;
-  unlocked: boolean;
-  unlockedDate: string | null;
-  xpReward: number;
-  condition: (stats: UserStats) => boolean;
-}
+import { useAuthStore } from './authStore';
 
 export interface UserStats {
   totalXp: number;
@@ -28,8 +18,20 @@ export interface UserStats {
   weeklyResetDate: string;
 }
 
+export interface Achievement {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedDate: string | null;
+  xpReward: number;
+  condition: (stats: UserStats) => boolean;
+}
+
 export const useUserStatsStore = defineStore('userStats', () => {
-  // Состояние
+  const authStore = useAuthStore();
+
   const stats = ref<UserStats>({
     totalXp: 0,
     level: 1,
@@ -44,7 +46,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
     weeklyResetDate: new Date().toDateString(),
   });
 
-  // Все достижения с условиями
   const allAchievements = ref<Achievement[]>([
     {
       id: 1,
@@ -159,30 +160,19 @@ export const useUserStatsStore = defineStore('userStats', () => {
   ]);
 
   // Геттеры
-  const totalLessons = computed(() => {
-    return modules.reduce((acc, m) => acc + m.lessons.length, 0);
-  });
-
+  const totalLessons = computed(() => modules.reduce((acc, m) => acc + m.lessons.length, 0));
   const totalGames = computed(() => 3);
-
   const completedGamesCount = computed(() => stats.value.completedGames.length);
-
-  const unlockedAchievementsCount = computed(() => {
-    return stats.value.unlockedAchievements.length;
-  });
-
+  const unlockedAchievementsCount = computed(() => stats.value.unlockedAchievements.length);
   const totalAchievements = computed(() => allAchievements.value.length);
 
-  // Получить все достижения с актуальным статусом
   const achievements = computed(() => {
     return allAchievements.value.map((ach) => ({
       ...ach,
       unlocked: stats.value.unlockedAchievements.includes(ach.id),
-      unlockedDate: ach.unlockedDate,
     }));
   });
 
-  // Последние полученные достижения
   const recentAchievements = computed(() => {
     return achievements.value
       .filter((a) => a.unlocked)
@@ -193,10 +183,17 @@ export const useUserStatsStore = defineStore('userStats', () => {
       .slice(0, 6);
   });
 
-  // Предстоящие достижения
   const upcomingAchievements = computed(() => {
     return achievements.value.filter((a) => !a.unlocked).slice(0, 4);
   });
+
+  const userLevel = computed(() => Math.floor(stats.value.totalXp / 1000) + 1);
+  const xpPercentage = computed(() => {
+    const levelXP = (userLevel.value - 1) * 1000;
+    const nextLevelXP = userLevel.value * 1000;
+    return ((stats.value.totalXp - levelXP) / (nextLevelXP - levelXP)) * 100;
+  });
+  const nextLevelXP = computed(() => userLevel.value * 1000);
 
   // Методы
   const loadStats = () => {
@@ -206,7 +203,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
       stats.value = { ...stats.value, ...parsed };
     }
 
-    // Синхронизируем unlockedDate из сохраненных достижений
     const savedAchievements = localStorage.getItem('userAchievements');
     if (savedAchievements) {
       const saved = JSON.parse(savedAchievements);
@@ -219,6 +215,12 @@ export const useUserStatsStore = defineStore('userStats', () => {
       });
     }
 
+    // Синхронизируем с authStore
+    if (authStore.user && authStore.user.exp !== stats.value.totalXp) {
+      stats.value.totalXp = authStore.user.exp;
+      saveStats();
+    }
+
     checkDailyStreak();
     checkWeeklyReset();
   };
@@ -226,7 +228,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
   const saveStats = () => {
     localStorage.setItem('userStats', JSON.stringify(stats.value));
 
-    // Сохраняем статус достижений
     const achievementsToSave = allAchievements.value.map((ach) => ({
       id: ach.id,
       unlocked: ach.unlocked,
@@ -262,7 +263,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
     if (lastReset !== today) {
       const lastResetDate = new Date(lastReset);
       const todayDate = new Date(today);
-
       const weekDiff = Math.floor(
         (todayDate.getTime() - lastResetDate.getTime()) / (1000 * 60 * 60 * 24),
       );
@@ -288,10 +288,7 @@ export const useUserStatsStore = defineStore('userStats', () => {
     if (!stats.value.completedGames.includes(gameType)) {
       stats.value.completedGames.push(gameType);
       stats.value.gamesCompletedThisWeek++;
-      stats.value.totalXp += xpEarned;
-      stats.value.xpEarnedThisWeek += xpEarned;
-      saveStats();
-      checkAchievements();
+      addXp(xpEarned);
     }
   };
 
@@ -299,9 +296,10 @@ export const useUserStatsStore = defineStore('userStats', () => {
     stats.value.totalXp += xpAmount;
     stats.value.xpEarnedThisWeek += xpAmount;
 
-    const newLevel = Math.floor(stats.value.totalXp / 1000) + 1;
-    if (newLevel > stats.value.level) {
-      stats.value.level = newLevel;
+    // Синхронизируем с authStore
+    if (authStore.user) {
+      authStore.user.exp = stats.value.totalXp;
+      authStore.updateUserXp(xpAmount);
     }
 
     saveStats();
@@ -319,7 +317,6 @@ export const useUserStatsStore = defineStore('userStats', () => {
         stats.value.totalXp += achievement.xpReward;
         hasNewAchievement = true;
 
-        // Сохраняем в localStorage для уведомлений
         const newAchievements = JSON.parse(localStorage.getItem('newAchievements') || '[]');
         newAchievements.push({
           id: achievement.id,
@@ -333,6 +330,10 @@ export const useUserStatsStore = defineStore('userStats', () => {
 
     if (hasNewAchievement) {
       saveStats();
+      // Синхронизируем с authStore
+      if (authStore.user) {
+        authStore.user.exp = stats.value.totalXp;
+      }
     }
   };
 
@@ -357,6 +358,13 @@ export const useUserStatsStore = defineStore('userStats', () => {
     checkAchievements();
   };
 
+  const syncFromAuth = (expFromAuth: number) => {
+    if (stats.value.totalXp !== expFromAuth) {
+      stats.value.totalXp = expFromAuth;
+      saveStats();
+    }
+  };
+
   return {
     stats,
     achievements,
@@ -367,11 +375,15 @@ export const useUserStatsStore = defineStore('userStats', () => {
     completedGamesCount,
     unlockedAchievementsCount,
     totalAchievements,
+    userLevel,
+    xpPercentage,
+    nextLevelXP,
     addLessonCompleted,
     addGameCompleted,
     addXp,
     getNewAchievements,
     checkAchievements,
     init,
+    syncFromAuth,
   };
 });

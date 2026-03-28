@@ -2,9 +2,9 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
-import './assets/style.scss';
 import router from './router';
 import { useAuthStore } from './stores/authStore';
+import { useModulesStore } from './stores/modulesStore';
 import { useUserStatsStore } from './stores/userStatsStore';
 
 const app = createApp(App);
@@ -13,11 +13,24 @@ const pinia = createPinia();
 app.use(pinia);
 app.use(router);
 
-// Инициализация
-const authStore = useAuthStore();
-const userStatsStore = useUserStatsStore();
+// Ждем инициализации всех сторов
+const initApp = async () => {
+  const authStore = useAuthStore();
+  const userStatsStore = useUserStatsStore();
+  const modulesStore = useModulesStore();
 
-authStore.init();
-userStatsStore.init();
+  // Ждем загрузки пользователя из auth
+  await authStore.init();
 
-app.mount('#app');
+  // После загрузки пользователя, инициализируем статистику
+  // и синхронизируем exp из authStore
+  if (authStore.user) {
+    userStatsStore.syncFromAuth(authStore.user.exp);
+  }
+  await userStatsStore.init();
+  await modulesStore.init();
+
+  app.mount('#app');
+};
+
+initApp();

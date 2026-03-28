@@ -7,6 +7,8 @@ import {
   unlockNextLesson as unlockNext,
   getTotalProgress as getTotal,
 } from '@/data/modules';
+import { resultsService } from '@/services/resultsService';
+import type { UserResult } from '@/services/resultsService';
 
 export const useModulesStore = defineStore('modules', () => {
   // Состояние
@@ -19,6 +21,8 @@ export const useModulesStore = defineStore('modules', () => {
   const codeOutput = ref('');
   const showCongrats = ref(false);
   const lastEarnedXP = ref(0);
+  const completedResults = ref<Set<string>>(new Set()); // Хранит keys пройденных уроков
+  const isLoadingResults = ref(false);
 
   // Состояние для тестов
   const testAnswers = ref<number[]>([]);
@@ -33,14 +37,108 @@ export const useModulesStore = defineStore('modules', () => {
   // Геттеры
   const totalProgress = computed(() => getTotal());
 
-  const getCorrectAnswersCount = () => {
-    return testResults.value.filter((r) => r.correct).length;
+  // Генерация уникального ключа для урока
+  const getLessonKey = (moduleId: number, lessonId: number, lessonType: string): string => {
+    return `lesson_${moduleId}_${lessonId}_${lessonType}`;
   };
 
-  const canCompleteTest = () => {
-    const total = currentLesson.value?.content?.questions?.length || 0;
-    const correct = getCorrectAnswersCount();
-    return total > 0 && correct >= Math.ceil(total * 0.7);
+  // Генерация ключа для игры
+  const getGameKey = (gameType: string): string => {
+    return `game_${gameType}`;
+  };
+
+  // Загрузка результатов пользователя
+  const loadUserResults = async () => {
+    isLoadingResults.value = true;
+    try {
+      const results = await resultsService.getUserResults();
+      // Создаем Set из ключей пройденных уроков
+      const completedSet = new Set<string>();
+      results.forEach((result) => {
+        completedSet.add(result.key);
+      });
+      completedResults.value = completedSet;
+
+      // Синхронизируем статус уроков с полученными результатами
+      syncLessonsWithResults();
+    } catch (error) {
+      console.error('Ошибка загрузки результатов:', error);
+    } finally {
+      isLoadingResults.value = false;
+    }
+  };
+
+  // Синхронизация уроков с загруженными результатами
+  const syncLessonsWithResults = () => {
+    modules.value.forEach((module) => {
+      module.lessons.forEach((lesson) => {
+        const key = getLessonKey(module.id, lesson.id, lesson.type);
+        if (completedResults.value.has(key) && !lesson.completed) {
+          lesson.completed = true;
+          // Если урок пройден, разблокируем следующий
+          const currentIndex = module.lessons.findIndex((l) => l.id === lesson.id);
+          const nextLesson = module.lessons[currentIndex + 1];
+          if (nextLesson) {
+            nextLesson.locked = false;
+          }
+        }
+      });
+      // Обновляем прогресс модуля
+      updateProgress(module);
+    });
+  };
+
+  // Сохранение результата урока
+  const saveLessonResult = async (lesson: any, moduleId: number, xpEarned: number) => {
+    const key = getLessonKey(moduleId, lesson.id, lesson.type);
+
+    // Проверяем, не сохранен ли уже результат
+    if (completedResults.value.has(key)) {
+      return;
+    }
+
+    try {
+      await resultsService.saveResult({
+        key,
+        result_type: lesson.type,
+        exp_earned: xpEarned,
+      });
+      completedResults.value.add(key);
+    } catch (error) {
+      console.error('Ошибка сохранения результата:', error);
+    }
+  };
+
+  // Сохранение результата игры
+  const saveGameResult = async (gameType: string, xpEarned: number) => {
+    const key = getGameKey(gameType);
+
+    if (completedResults.value.has(key)) {
+      return;
+    }
+
+    try {
+      await resultsService.saveResult({
+        key,
+        result_type: 'game',
+        exp_earned: xpEarned,
+      });
+      completedResults.value.add(key);
+    } catch (error) {
+      console.error('Ошибка сохранения результата игры:', error);
+    }
+  };
+
+  // Проверка, пройден ли урок
+  const isLessonCompleted = (moduleId: number, lessonId: number, lessonType: string): boolean => {
+    const key = getLessonKey(moduleId, lessonId, lessonType);
+    return completedResults.value.has(key);
+  };
+
+  // Проверка, пройдена ли игра
+  const isGameCompleted = (gameType: string): boolean => {
+    const key = getGameKey(gameType);
+    return completedResults.value.has(key);
   };
 
   // Методы для работы с модулями
@@ -85,20 +183,40 @@ export const useModulesStore = defineStore('modules', () => {
     showTestResults.value = false;
   };
 
-  const completeTheoryLesson = () => {
+  const completeTheoryLesson = async () => {
+    if (currentLesson.value && !currentLesson.value.completed) {
+      currentLesson.value.completed = true;
+      const xp = currentLesson.value.xp;
+      console.log('completeTheoryLesson: урок пройден, XP =', xp);
+      lastEarnedXP.value = xp;
+      showCongrats.value = true;
+
+      await saveLessonResult(currentLesson.value, currentModule.value!.id, xp);
+      updateProgress(currentModule.value!);
+      unlockNext(currentModule.value!, currentLesson.value.id);
+
+      setTimeout(() => {
+        closeLesson();
+      }, 1500);
+
+      return xp;
+    }
+    console.log('completeTheoryLesson: урок уже пройден или отсутствует');
+    return 0;
+  };
+
+  const completeTestLesson = async () => {
     if (currentLesson.value && !currentLesson.value.completed) {
       currentLesson.value.completed = true;
       const xp = currentLesson.value.xp;
       lastEarnedXP.value = xp;
       showCongrats.value = true;
 
-      // Обновляем прогресс модуля
-      updateProgress(currentModule.value);
+      await saveLessonResult(currentLesson.value, currentModule.value!.id, xp);
 
-      // Разблокируем следующий урок
-      unlockNext(currentModule.value, currentLesson.value.id);
+      updateProgress(currentModule.value!);
+      unlockNext(currentModule.value!, currentLesson.value.id);
 
-      // Закрываем модалку через 1.5 секунды
       setTimeout(() => {
         closeLesson();
       }, 1500);
@@ -108,34 +226,17 @@ export const useModulesStore = defineStore('modules', () => {
     return 0;
   };
 
-  const completeTestLesson = () => {
+  const completePracticeLesson = async () => {
     if (currentLesson.value && !currentLesson.value.completed) {
       currentLesson.value.completed = true;
       const xp = currentLesson.value.xp;
       lastEarnedXP.value = xp;
       showCongrats.value = true;
 
-      updateProgress(currentModule.value);
-      unlockNext(currentModule.value, currentLesson.value.id);
+      await saveLessonResult(currentLesson.value, currentModule.value!.id, xp);
 
-      setTimeout(() => {
-        closeLesson();
-      }, 1500);
-
-      return xp;
-    }
-    return 0;
-  };
-
-  const completePracticeLesson = () => {
-    if (currentLesson.value && !currentLesson.value.completed) {
-      currentLesson.value.completed = true;
-      const xp = currentLesson.value.xp;
-      lastEarnedXP.value = xp;
-      showCongrats.value = true;
-
-      updateProgress(currentModule.value);
-      unlockNext(currentModule.value, currentLesson.value.id);
+      updateProgress(currentModule.value!);
+      unlockNext(currentModule.value!, currentLesson.value.id);
 
       setTimeout(() => {
         closeLesson();
@@ -170,6 +271,16 @@ export const useModulesStore = defineStore('modules', () => {
     }));
 
     showTestResults.value = true;
+  };
+
+  const getCorrectAnswersCount = () => {
+    return testResults.value.filter((r) => r.correct).length;
+  };
+
+  const canCompleteTest = () => {
+    const total = currentLesson.value?.content?.questions?.length || 0;
+    const correct = getCorrectAnswersCount();
+    return total > 0 && correct >= Math.ceil(total * 0.7);
   };
 
   // Методы для практики
@@ -227,12 +338,16 @@ export const useModulesStore = defineStore('modules', () => {
     currentGame.value = '';
   };
 
+  const saveGameResultFromStore = async (gameType: string, xpEarned: number) => {
+    await saveGameResult(gameType, xpEarned);
+  };
+
   const resetCongrats = () => {
     showCongrats.value = false;
     lastEarnedXP.value = 0;
   };
 
-  // Сохранение прогресса в localStorage
+  // Сохранение прогресса в localStorage (как резервное копирование)
   const saveProgress = () => {
     const modulesData = modules.value.map((m) => ({
       id: m.id,
@@ -272,8 +387,9 @@ export const useModulesStore = defineStore('modules', () => {
   };
 
   // Инициализация
-  const init = () => {
+  const init = async () => {
     loadProgress();
+    await loadUserResults();
   };
 
   return {
@@ -293,11 +409,14 @@ export const useModulesStore = defineStore('modules', () => {
     showTestResults,
     showGameModal,
     currentGame,
+    isLoadingResults,
 
     // Геттеры
     totalProgress,
     getCorrectAnswersCount,
     canCompleteTest,
+    isLessonCompleted,
+    isGameCompleted,
 
     // Методы
     toggleModule,
@@ -314,9 +433,12 @@ export const useModulesStore = defineStore('modules', () => {
     checkPracticeTask,
     openGame,
     closeGame,
+    saveGameResultFromStore,
     resetCongrats,
     saveProgress,
     loadProgress,
     init,
+    saveLessonResult,
+    saveGameResult,
   };
 });

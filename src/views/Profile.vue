@@ -204,7 +204,6 @@ const userRank = ref(0);
 
 const totalProgress = computed(() => getTotalProgress());
 
-// Форматирование даты регистрации
 const formattedDate = computed(() => {
   if (!user.value?.date_joined) return '—';
   const date = new Date(user.value.date_joined);
@@ -215,7 +214,6 @@ const formattedDate = computed(() => {
   });
 });
 
-// Прогресс по модулям
 const modulesProgress = computed(() => {
   return modules.map((m) => ({
     id: m.id,
@@ -228,15 +226,12 @@ const userInitial = computed(() => {
   return user.value?.username?.charAt(0).toUpperCase() || '?';
 });
 
-// Получение всех пользователей и вычисление места в рейтинге
 const fetchUsersAndRank = async () => {
   try {
     const data = await usersService.getUsers();
-    // Сортируем по опыту (от большего к меньшему)
     const sortedUsers = [...data].sort((a, b) => b.exp - a.exp);
     allUsers.value = sortedUsers;
 
-    // Находим место текущего пользователя
     const currentUserId = authStore.user?.id;
     if (currentUserId) {
       const rankIndex = sortedUsers.findIndex((u) => u.id === currentUserId);
@@ -248,7 +243,7 @@ const fetchUsersAndRank = async () => {
 };
 
 const shareToVK = () => {
-  const shareText = `Я изучаю программирование в CodeCraft! 🎮\n\n📊 Моя статистика:\n• Уровень: ${userStatsStore.stats.level}\n• XP: ${userStatsStore.stats.totalXp}\n• Уроков пройдено: ${userStatsStore.stats.completedLessons}/${userStatsStore.totalLessons}\n• Игр пройдено: ${userStatsStore.completedGamesCount}/${userStatsStore.totalGames}\n• Достижений: ${userStatsStore.unlockedAchievementsCount}/${userStatsStore.totalAchievements}\n\nПрисоединяйся ко мне! 🚀`;
+  const shareText = `Я изучаю программирование в CodeCraft! 🎮\n\n📊 Моя статистика:\n• Уровень: ${userStatsStore.userLevel}\n• XP: ${userStatsStore.stats.totalXp}\n• Уроков пройдено: ${userStatsStore.stats.completedLessons}/${userStatsStore.totalLessons}\n• Игр пройдено: ${userStatsStore.completedGamesCount}/${userStatsStore.totalGames}\n• Достижений: ${userStatsStore.unlockedAchievementsCount}/${userStatsStore.totalAchievements}\n\nПрисоединяйся ко мне! 🚀`;
 
   const shareUrl = encodeURIComponent(window.location.origin);
   const shareTitle = encodeURIComponent('CodeCraft - Изучай программирование играя!');

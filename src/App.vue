@@ -38,18 +38,20 @@
           <div class="stats-container">
             <div class="level-badge">
               <span class="level-icon">🏆</span>
-              <span>Ур. {{ userLevel }}</span>
+              <span>Ур. {{ userStatsStore.userLevel }}</span>
             </div>
 
             <div class="xp-container">
               <div class="xp-bar">
                 <div
                   class="xp-fill"
-                  :style="{ width: xpPercentage + '%' }"
+                  :style="{ width: userStatsStore.xpPercentage + '%' }"
                 >
                   <div class="xp-glow"></div>
                 </div>
-                <span class="xp-text">{{ userExp }} / {{ nextLevelXP }} XP</span>
+                <span class="xp-text"
+                  >{{ userStatsStore.stats.totalXp }} / {{ userStatsStore.nextLevelXP }} XP</span
+                >
               </div>
             </div>
           </div>
@@ -318,11 +320,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import AuthModal from '@/components/auth/AuthModal.vue';
 import { useAuthStore } from '@/stores/authStore';
-import axiosInstance from './api/axiosInstance';
+import { useUserStatsStore } from '@/stores/userStatsStore';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const userStatsStore = useUserStatsStore();
+
 const showAuthModal = ref(false);
 const showUserMenu = ref(false);
 const isDarkMode = ref(false);
@@ -333,20 +337,7 @@ const notifications = ref<any[]>([]);
 const dailyRewardClaimed = ref(false);
 
 const user = computed(() => authStore.user);
-
-// Вычисление уровня и XP из exp (опыт)
-const userExp = computed(() => user.value?.exp || 0);
-const userLevel = computed(() => Math.floor(userExp.value / 1000) + 1);
 const userInitial = computed(() => user.value?.username?.charAt(0).toUpperCase() || '?');
-
-const xpPercentage = computed(() => {
-  if (!userExp.value) return 0;
-  const levelXP = (userLevel.value - 1) * 1000;
-  const nextLevelXP = userLevel.value * 1000;
-  return ((userExp.value - levelXP) / (nextLevelXP - levelXP)) * 100;
-});
-
-const nextLevelXP = computed(() => userLevel.value * 1000);
 
 const navTabs = [
   { path: '/dashboard', name: 'Главная', emoji: '🏠' },
@@ -409,22 +400,17 @@ const claimDailyReward = () => {
 
   const rewardXP = 50;
   const rewardBonus = Math.floor(Math.random() * 30) + 20;
+  const totalReward = rewardXP + rewardBonus;
 
   if (authStore.user) {
-    const newExp = userExp.value + rewardXP + rewardBonus;
-    authStore.user.exp = newExp;
+    userStatsStore.addXp(totalReward);
     localStorage.setItem('dailyRewardDate', new Date().toDateString());
 
     dailyRewardClaimed.value = true;
     showNotification(
-      `🎁 Ежедневная награда! +${rewardXP + rewardBonus} XP (${rewardXP} + бонус ${rewardBonus})! 🎉`,
+      `🎁 Ежедневная награда! +${totalReward} XP (${rewardXP} + бонус ${rewardBonus})! 🎉`,
       'success',
     );
-
-    const newLevel = Math.floor(newExp / 1000) + 1;
-    if (newLevel > userLevel.value) {
-      showNotification(`🎉 ПОЗДРАВЛЯЕМ! Ты достиг ${newLevel} уровня! 🎉`, 'success');
-    }
   }
 };
 
@@ -480,6 +466,13 @@ const handleAuthSuccess = () => {
 
 const handleLogout = async () => {
   await authStore.logout();
+
+  // Сбрасываем статистику
+  userStatsStore.resetStats();
+
+  // Перезагружаем модули (сбрасываем прогресс)
+  await modulesStore.init();
+
   showNotification('До новых встреч! Приходи ещё! 👋', 'info');
   showUserMenu.value = false;
   router.push('/');
@@ -527,7 +520,6 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
-// Обновление онлайн-счетчика и таймера награды
 let onlineInterval: any;
 let rewardTimerInterval: any;
 
@@ -537,12 +529,9 @@ onMounted(() => {
     onlineCount.value = Math.floor(1200 + Math.random() * 300);
   }, 5000);
 
-  // Проверяем ежедневную награду при загрузке
   checkDailyReward();
 
-  // Обновляем таймер награды каждую минуту
   rewardTimerInterval = setInterval(() => {
-    // Принудительно обновляем вычисляемое свойство
     rewardCooldownText.value;
   }, 60000);
 });
@@ -596,7 +585,6 @@ body {
   flex-direction: column;
 }
 
-/* Анимированный фон */
 .animated-bg {
   position: fixed;
   top: 0;
@@ -650,7 +638,6 @@ body {
   }
 }
 
-/* Темная тема */
 #app.dark-mode .gradient-bg {
   background: linear-gradient(135deg, #1e1e2f 0%, #2d2d44 100%);
 }
@@ -661,7 +648,6 @@ body {
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* Контент приложения */
 .app-content {
   position: relative;
   z-index: 1;
@@ -671,7 +657,6 @@ body {
   flex: 1;
 }
 
-/* Хедер */
 .game-header {
   display: flex;
   justify-content: space-between;
@@ -719,7 +704,6 @@ body {
   font-weight: bold;
 }
 
-/* Блок с информацией пользователя */
 .user-info {
   display: flex;
   align-items: center;
@@ -831,14 +815,6 @@ body {
   height: 38px;
 }
 
-.avatar {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  border: 2px solid #ffd166;
-  object-fit: cover;
-}
-
 .avatar-ring {
   position: absolute;
   top: -2px;
@@ -905,11 +881,6 @@ body {
   color: white;
 }
 
-.logout-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
 .login-btn-header {
   display: flex;
   align-items: center;
@@ -929,7 +900,6 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Меню пользователя */
 .user-menu {
   position: absolute;
   top: 70px;
@@ -948,12 +918,6 @@ body {
   padding-bottom: 15px;
   border-bottom: 2px solid #f0f0f0;
   margin-bottom: 15px;
-}
-
-.menu-header img {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
 }
 
 .menu-header h4 {
@@ -1006,7 +970,6 @@ body {
   padding-top: 12px;
 }
 
-/* Навигация */
 .game-nav {
   display: flex;
   justify-content: center;
@@ -1047,14 +1010,12 @@ body {
   font-size: 18px;
 }
 
-/* Основной контент */
 .main-content {
   flex: 1;
   padding: 20px 30px;
   position: relative;
 }
 
-/* Welcome секция */
 .welcome-section {
   display: flex;
   align-items: center;
@@ -1205,7 +1166,6 @@ body {
   left: 100%;
 }
 
-/* Футер */
 .game-footer {
   display: flex;
   justify-content: space-between;
@@ -1240,10 +1200,6 @@ body {
   background: linear-gradient(135deg, #888, #666);
   cursor: not-allowed;
   opacity: 0.7;
-}
-
-.daily-reward.claimed:hover {
-  transform: none;
 }
 
 .reward-icon {
@@ -1323,7 +1279,6 @@ body {
   color: #ffd166;
 }
 
-/* Уведомления */
 .notifications {
   position: fixed;
   top: 20px;
@@ -1383,12 +1338,10 @@ body {
   transform: translateX(100px);
 }
 
-/* Анимации переходов */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
@@ -1398,12 +1351,10 @@ body {
 .slide-up-leave-active {
   transition: all 0.3s ease;
 }
-
 .slide-up-enter-from {
   opacity: 0;
   transform: translateY(30px);
 }
-
 .slide-up-leave-to {
   opacity: 0;
   transform: translateY(-30px);
@@ -1413,12 +1364,10 @@ body {
 .slide-right-leave-active {
   transition: all 0.3s ease;
 }
-
 .slide-right-enter-from {
   opacity: 0;
   transform: translateX(-30px);
 }
-
 .slide-right-leave-to {
   opacity: 0;
   transform: translateX(30px);
@@ -1428,12 +1377,10 @@ body {
 .slide-left-leave-active {
   transition: all 0.3s ease;
 }
-
 .slide-left-enter-from {
   opacity: 0;
   transform: translateX(30px);
 }
-
 .slide-left-leave-to {
   opacity: 0;
   transform: translateX(-30px);
@@ -1443,12 +1390,10 @@ body {
 .slide-down-leave-active {
   transition: all 0.3s ease;
 }
-
 .slide-down-enter-from {
   opacity: 0;
   transform: translateY(-20px);
 }
-
 .slide-down-leave-to {
   opacity: 0;
   transform: translateY(-20px);
@@ -1464,79 +1409,63 @@ body {
   }
 }
 
-/* Адаптивность */
 @media (max-width: 768px) {
   .game-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
-
   .user-info {
     justify-content: space-between;
     flex-wrap: wrap;
   }
-
   .stats-container {
     flex-wrap: wrap;
     justify-content: center;
   }
-
   .xp-bar {
     width: 100px;
   }
-
   .username {
     max-width: 100px;
   }
-
   .game-nav {
     flex-wrap: wrap;
     margin: 15px;
     gap: 10px;
   }
-
   .game-nav button {
     padding: 8px 16px;
     font-size: 13px;
   }
-
   .nav-text {
     display: none;
   }
-
   .glitch-text {
     font-size: 40px;
   }
-
   .tagline {
     font-size: 18px;
   }
-
   .features {
     gap: 12px;
   }
-
   .feature {
     font-size: 12px;
     padding: 6px 12px;
   }
-
   .game-footer {
     flex-direction: column;
     gap: 12px;
     text-align: center;
   }
-
   .daily-reward {
     width: 100%;
     justify-content: center;
   }
-
   .reward-info {
     align-items: center;
   }
-
   .main-content {
     padding: 15px;
   }
