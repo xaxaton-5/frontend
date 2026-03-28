@@ -115,7 +115,7 @@ const allUsers = ref<User[]>([]);
 
 const currentUserId = computed(() => authStore.user?.id);
 
-const onlineUsers = computed(() => allUsers.value);
+const onlineUsers = computed(() => chatStore.onlineUsers);
 const onlineUsersCount = computed(() => onlineUsers.value.length);
 
 const emojis = ['😊', '🎉', '👍', '❤️', '🔥', '🚀', '💻', '🎮', '⭐', '🏆'];
@@ -130,6 +130,8 @@ const fetchAllUsers = async () => {
 };
 
 const getUsernameById = (userId: number): string => {
+  const fromOnline = chatStore.onlineUsers.find((u) => u.id === userId);
+  if (fromOnline) return fromOnline.username;
   const user = allUsers.value.find((u) => u.id === userId);
   return user?.username || `Пользователь ${userId}`;
 };

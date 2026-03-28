@@ -320,11 +320,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import AuthModal from '@/components/auth/AuthModal.vue';
 import { useAuthStore } from '@/stores/authStore';
+import { useModulesStore } from '@/stores/modulesStore';
 import { useUserStatsStore } from '@/stores/userStatsStore';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const modulesStore = useModulesStore();
 const userStatsStore = useUserStatsStore();
 
 const showAuthModal = ref(false);
@@ -459,7 +461,11 @@ const showNotification = (message: string, type: 'success' | 'error' | 'info' = 
   }, 3000);
 };
 
-const handleAuthSuccess = () => {
+const handleAuthSuccess = async () => {
+  if (authStore.user) {
+    userStatsStore.syncFromAuth(authStore.user.exp);
+  }
+  await modulesStore.init();
   showNotification('Добро пожаловать в CodeCraft!', 'success');
   router.push('/dashboard');
 };
@@ -470,8 +476,8 @@ const handleLogout = async () => {
   // Сбрасываем статистику
   userStatsStore.resetStats();
 
-  // Перезагружаем модули (сбрасываем прогресс)
-  await modulesStore.init();
+  // Сбрасываем состояние модулей локально
+  modulesStore.resetModulesState();
 
   showNotification('До новых встреч! Приходи ещё! 👋', 'info');
   showUserMenu.value = false;

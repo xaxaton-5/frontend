@@ -19,10 +19,6 @@ export const useAuthStore = defineStore('auth', () => {
       const userData = await authService.auth();
       user.value = userData;
       isAuthenticated.value = true;
-
-      // Сохраняем в localStorage для отладки
-      console.log('Загружен пользователь из auth:', userData);
-      console.log('XP пользователя:', userData.exp);
     } catch (err) {
       console.error('Auth init error:', err);
       localStorage.removeItem('access_token');
@@ -87,11 +83,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // Обновление XP пользователя
-  const updateUserXp = (xpAmount: number) => {
+  const setUserXp = (xpAmount: number) => {
     if (user.value) {
-      user.value.exp += xpAmount;
-      localStorage.setItem('user', JSON.stringify(user.value));
+      user.value.exp = xpAmount;
     }
   };
 
@@ -109,7 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
-    updateUserXp,
+    setUserXp,
     clearError,
   };
 });

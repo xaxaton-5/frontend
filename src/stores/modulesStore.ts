@@ -3,16 +3,34 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import {
   modules as initialModules,
-  updateModuleProgress as updateProgress,
-  unlockNextLesson as unlockNext,
-  getTotalProgress as getTotal,
 } from '@/data/modules';
 import { resultsService } from '@/services/resultsService';
-import type { UserResult } from '@/services/resultsService';
+import { useAuthStore } from './authStore';
+
+const cloneModules = () =>
+  initialModules.map((module) => ({
+    ...module,
+    lessons: module.lessons.map((lesson) => ({
+      ...lesson,
+      content: {
+        ...lesson.content,
+        theoryPoints: 'theoryPoints' in lesson.content ? [...lesson.content.theoryPoints] : undefined,
+        questions:
+          'questions' in lesson.content
+            ? lesson.content.questions.map((question) => ({
+                ...question,
+                options: [...question.options],
+              }))
+            : undefined,
+      },
+    })),
+  }));
 
 export const useModulesStore = defineStore('modules', () => {
+  const authStore = useAuthStore();
+
   // Состояние
-  const modules = ref(initialModules);
+  const modules = ref(cloneModules());
   const expandedModules = ref<number[]>([1]);
   const currentLesson = ref<any>(null);
   const currentModule = ref<any>(null);
@@ -35,7 +53,49 @@ export const useModulesStore = defineStore('modules', () => {
   const currentGame = ref('');
 
   // Геттеры
-  const totalProgress = computed(() => getTotal());
+  const totalProgress = computed(() => {
+    const totalLessonsCount = modules.value.reduce((acc, module) => acc + module.lessons.length, 0);
+    const completedLessonsCount = modules.value.reduce(
+      (acc, module) => acc + module.lessons.filter((lesson) => lesson.completed).length,
+      0,
+    );
+
+    return totalLessonsCount
+      ? Math.round((completedLessonsCount / totalLessonsCount) * 100)
+      : 0;
+  });
+
+  const updateModuleProgress = (moduleId: number) => {
+    const module = modules.value.find((item) => item.id === moduleId);
+    if (!module) return;
+
+    const completedCount = module.lessons.filter((lesson) => lesson.completed).length;
+    module.progress = Math.round((completedCount / module.lessons.length) * 100);
+
+    if (completedCount === module.lessons.length && !module.completed) {
+      module.completed = true;
+      const nextModule = modules.value.find((item) => item.id === module.id + 1);
+      if (nextModule) {
+        nextModule.locked = false;
+        if (nextModule.lessons[0]) {
+          nextModule.lessons[0].locked = false;
+        }
+      }
+    }
+  };
+
+  const unlockNextLesson = (moduleId: number, currentLessonId: number) => {
+    const module = modules.value.find((item) => item.id === moduleId);
+    if (!module) return;
+
+    const currentIndex = module.lessons.findIndex((lesson) => lesson.id === currentLessonId);
+    const nextLesson = module.lessons[currentIndex + 1];
+    if (nextLesson) {
+      nextLesson.locked = false;
+    }
+
+    updateModuleProgress(moduleId);
+  };
 
   // Генерация уникального ключа для урока
   const getLessonKey = (moduleId: number, lessonId: number, lessonType: string): string => {
@@ -49,6 +109,11 @@ export const useModulesStore = defineStore('modules', () => {
 
   // Загрузка результатов пользователя
   const loadUserResults = async () => {
+    if (!authStore.isAuthenticated) {
+      completedResults.value = new Set();
+      return;
+    }
+
     isLoadingResults.value = true;
     try {
       const results = await resultsService.getUserResults();
@@ -83,9 +148,10 @@ export const useModulesStore = defineStore('modules', () => {
           }
         }
       });
-      // Обновляем прогресс модуля
-      updateProgress(module);
+      updateModuleProgress(module.id);
     });
+
+    saveProgress();
   };
 
   // Сохранение результата урока
@@ -192,8 +258,9 @@ export const useModulesStore = defineStore('modules', () => {
       showCongrats.value = true;
 
       await saveLessonResult(currentLesson.value, currentModule.value!.id, xp);
-      updateProgress(currentModule.value!);
-      unlockNext(currentModule.value!, currentLesson.value.id);
+      updateModuleProgress(currentModule.value!.id);
+      unlockNextLesson(currentModule.value!.id, currentLesson.value.id);
+      saveProgress();
 
       setTimeout(() => {
         closeLesson();
@@ -201,7 +268,6 @@ export const useModulesStore = defineStore('modules', () => {
 
       return xp;
     }
-    console.log('completeTheoryLesson: урок уже пройден или отсутствует');
     return 0;
   };
 
@@ -214,8 +280,9 @@ export const useModulesStore = defineStore('modules', () => {
 
       await saveLessonResult(currentLesson.value, currentModule.value!.id, xp);
 
-      updateProgress(currentModule.value!);
-      unlockNext(currentModule.value!, currentLesson.value.id);
+      updateModuleProgress(currentModule.value!.id);
+      unlockNextLesson(currentModule.value!.id, currentLesson.value.id);
+      saveProgress();
 
       setTimeout(() => {
         closeLesson();
@@ -235,8 +302,9 @@ export const useModulesStore = defineStore('modules', () => {
 
       await saveLessonResult(currentLesson.value, currentModule.value!.id, xp);
 
-      updateProgress(currentModule.value!);
-      unlockNext(currentModule.value!, currentLesson.value.id);
+      updateModuleProgress(currentModule.value!.id);
+      unlockNextLesson(currentModule.value!.id, currentLesson.value.id);
+      saveProgress();
 
       setTimeout(() => {
         closeLesson();
@@ -302,13 +370,13 @@ export const useModulesStore = defineStore('modules', () => {
     }
   };
 
-  const checkPracticeTask = () => {
+  const checkPracticeTask = async () => {
     const checkFunction = currentLesson.value?.content.checkFunction;
 
     if (checkFunction && checkFunction(userCode.value)) {
       codeOutput.value =
         '✅ Отлично! Задание выполнено правильно!\n\n🎉 Ты получаешь XP за прохождение урока!';
-      const xp = completePracticeLesson();
+      const xp = await completePracticeLesson();
       return xp;
     } else {
       const task = currentLesson.value?.content.task || '';
@@ -364,6 +432,8 @@ export const useModulesStore = defineStore('modules', () => {
   };
 
   const loadProgress = () => {
+    modules.value = cloneModules();
+
     const saved = localStorage.getItem('modulesProgress');
     if (saved) {
       const savedData = JSON.parse(saved);
@@ -386,10 +456,24 @@ export const useModulesStore = defineStore('modules', () => {
     }
   };
 
+  const resetModulesState = () => {
+    modules.value = cloneModules();
+    completedResults.value = new Set();
+    expandedModules.value = [1];
+    closeLesson();
+    closeGame();
+    resetCongrats();
+    localStorage.removeItem('modulesProgress');
+  };
+
   // Инициализация
   const init = async () => {
     loadProgress();
-    await loadUserResults();
+    if (authStore.isAuthenticated) {
+      await loadUserResults();
+    } else {
+      completedResults.value = new Set();
+    }
   };
 
   return {
@@ -437,6 +521,7 @@ export const useModulesStore = defineStore('modules', () => {
     resetCongrats,
     saveProgress,
     loadProgress,
+    resetModulesState,
     init,
     saveLessonResult,
     saveGameResult,
