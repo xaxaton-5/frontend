@@ -14,6 +14,12 @@
           <div class="user-info">
             <h1>{{ user?.username }}</h1>
             <p class="user-email">{{ user?.email }}</p>
+            <p
+              v-if="user?.guild_name"
+              class="guild-name"
+            >
+              🛡️ {{ user.guild_name }}
+            </p>
             <div class="user-stats-badge">
               <span>📅 Регистрация: {{ formattedDate }}</span>
               <span>🏆 Рейтинг: #{{ userRank }}</span>
@@ -375,6 +381,12 @@ onMounted(() => {
 
 .user-email {
   color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+.guild-name {
+  color: #ffd166;
+  font-weight: 700;
   margin-bottom: 12px;
 }
 

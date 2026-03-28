@@ -27,6 +27,12 @@
           {{ topPlayers[1].username.charAt(0).toUpperCase() }}
         </div>
         <h3>{{ topPlayers[1].username }}</h3>
+        <p
+          v-if="topPlayers[1].guild_name"
+          class="player-guild"
+        >
+          🛡️ {{ topPlayers[1].guild_name }}
+        </p>
         <p>Уровень {{ getLevelByExp(topPlayers[1].exp) }}</p>
         <div class="stats">
           <span>🏆 {{ topPlayers[1].exp }} XP</span>
@@ -42,6 +48,12 @@
           {{ topPlayers[0].username.charAt(0).toUpperCase() }}
         </div>
         <h3>{{ topPlayers[0].username }}</h3>
+        <p
+          v-if="topPlayers[0].guild_name"
+          class="player-guild"
+        >
+          🛡️ {{ topPlayers[0].guild_name }}
+        </p>
         <p>Уровень {{ getLevelByExp(topPlayers[0].exp) }}</p>
         <div class="stats">
           <span>🏆 {{ topPlayers[0].exp }} XP</span>
@@ -57,6 +69,12 @@
           {{ topPlayers[2].username.charAt(0).toUpperCase() }}
         </div>
         <h3>{{ topPlayers[2].username }}</h3>
+        <p
+          v-if="topPlayers[2].guild_name"
+          class="player-guild"
+        >
+          🛡️ {{ topPlayers[2].guild_name }}
+        </p>
         <p>Уровень {{ getLevelByExp(topPlayers[2].exp) }}</p>
         <div class="stats">
           <span>🏆 {{ topPlayers[2].exp }} XP</span>
@@ -106,7 +124,15 @@
           <div class="player-avatar-placeholder">
             {{ player.username.charAt(0).toUpperCase() }}
           </div>
-          <span class="player-name">{{ player.username }}</span>
+          <div class="player-meta">
+            <span class="player-name">{{ player.username }}</span>
+            <span
+              v-if="player.guild_name"
+              class="guild-badge"
+            >
+              🛡️ {{ player.guild_name }}
+            </span>
+          </div>
           <span
             v-if="player.id === currentUserId"
             class="you-badge"
@@ -178,6 +204,12 @@
         </div>
         <div>
           <h3>{{ currentUser.username }}</h3>
+          <p
+            v-if="currentUser.guild_name"
+            class="player-guild"
+          >
+            🛡️ {{ currentUser.guild_name }}
+          </p>
           <p>Твоя позиция: #{{ currentUserRank }}</p>
         </div>
       </div>
@@ -365,6 +397,12 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 
+.player-guild {
+  color: #ffd166 !important;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
 .top-card .stats {
   color: #ffd166;
   font-weight: bold;
@@ -434,6 +472,12 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+.player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .player-avatar-placeholder {
   width: 40px;
   height: 40px;
@@ -463,6 +507,18 @@ onMounted(() => {
 .player-name {
   color: white;
   font-weight: bold;
+}
+
+.guild-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 209, 102, 0.18);
+  color: #ffd166;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .you-badge {

@@ -13,9 +13,26 @@ export interface Guild {
   is_joined: boolean;
 }
 
+export interface GuildMember {
+  id: number;
+  username: string;
+  email: string;
+  exp: number;
+  is_parent: boolean;
+  children_count: number;
+  guild_name?: string;
+  date_joined: string;
+  created_at: string;
+}
+
 export interface GuildsResponse {
   guilds: Guild[];
   current_guild_id: number | null;
+}
+
+export interface GuildDetailResponse extends Guild {
+  total_exp: number;
+  members: GuildMember[];
 }
 
 export interface JoinGuildResponse {
@@ -31,6 +48,11 @@ export interface JoinGuildResponse {
 export const guildsService = {
   getGuilds: async (): Promise<GuildsResponse> => {
     const response = await axiosInstance.get('/guilds/list/');
+    return response.data;
+  },
+
+  getGuild: async (slug: string): Promise<GuildDetailResponse> => {
+    const response = await axiosInstance.get(`/guilds/${slug}/`);
     return response.data;
   },
 

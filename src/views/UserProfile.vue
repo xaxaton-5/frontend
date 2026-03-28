@@ -23,6 +23,12 @@
           <div class="user-info">
             <h1>{{ profileUser.username }}</h1>
             <p class="user-email">{{ profileUser.is_parent ? 'Родитель' : 'Участник сообщества' }}</p>
+            <p
+              v-if="profileUser.guild_name"
+              class="guild-name"
+            >
+              🛡️ {{ profileUser.guild_name }}
+            </p>
             <div class="user-stats-badge">
               <span>📅 Регистрация: {{ formattedDate }}</span>
               <span v-if="userRank > 0">🏆 Рейтинг: #{{ userRank }}</span>
@@ -79,6 +85,10 @@
           <div class="about-item">
             <span class="about-label">Дата регистрации</span>
             <span class="about-value">{{ formattedDate }}</span>
+          </div>
+          <div class="about-item">
+            <span class="about-label">Гильдия</span>
+            <span class="about-value">{{ profileUser.guild_name || 'Без гильдии' }}</span>
           </div>
           <div class="about-item">
             <span class="about-label">Позиция в рейтинге</span>
@@ -256,8 +266,14 @@ watch(() => route.params.id, loadUserProfile);
 }
 
 .user-email {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: rgba(255, 255, 255, 0.75);
+}
+
+.guild-name {
+  margin-bottom: 12px;
+  color: #ffd166;
+  font-weight: 700;
 }
 
 .user-stats-badge {

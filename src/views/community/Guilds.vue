@@ -85,14 +85,23 @@
           </span>
         </div>
 
-        <button
-          type="button"
-          class="join-btn"
-          :disabled="joinInProgressId === guild.id || guild.is_joined"
-          @click="handleJoinGuild(guild.id)"
-        >
-          {{ getJoinButtonLabel(guild) }}
-        </button>
+        <div class="card-actions">
+          <button
+            type="button"
+            class="details-btn"
+            @click="openGuildPage(guild.slug)"
+          >
+            Открыть гильдию
+          </button>
+          <button
+            type="button"
+            class="join-btn"
+            :disabled="joinInProgressId === guild.id || guild.is_joined"
+            @click="handleJoinGuild(guild.id)"
+          >
+            {{ getJoinButtonLabel(guild) }}
+          </button>
+        </div>
       </article>
     </section>
   </div>
@@ -100,9 +109,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { guildsService, type Guild } from '@/services/guildsService';
 
+const router = useRouter();
 const guilds = ref<Guild[]>([]);
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -143,6 +154,10 @@ const handleJoinGuild = async (guildId: number) => {
   } finally {
     joinInProgressId.value = null;
   }
+};
+
+const openGuildPage = (slug: string) => {
+  router.push(`/community/guilds/${slug}`);
 };
 
 const getJoinButtonLabel = (guild: Guild) => {
@@ -324,15 +339,30 @@ onMounted(() => {
   font-size: 13px;
 }
 
-.join-btn {
+.card-actions {
+  display: flex;
+  gap: 10px;
   margin-top: auto;
+}
+
+.details-btn,
+.join-btn {
+  flex: 1;
   border: none;
   border-radius: 999px;
   padding: 12px 18px;
-  background: linear-gradient(135deg, #ffd166, #ff6b6b);
   color: white;
   font-weight: 700;
   cursor: pointer;
+}
+
+.details-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.join-btn {
+  background: linear-gradient(135deg, #ffd166, #ff6b6b);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -348,6 +378,11 @@ onMounted(() => {
 .join-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(255, 107, 107, 0.24);
+}
+
+.details-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .state-card {

@@ -8,6 +8,7 @@ export interface User {
   exp: number;
   is_parent: boolean;
   children_count: number;
+  guild_name?: string;
   date_joined: string;
   created_at: string;
 }
