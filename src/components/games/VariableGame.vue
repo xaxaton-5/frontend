@@ -164,6 +164,18 @@
         <h2>{{ gameWon ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ' }}</h2>
         <p v-if="gameWon">Ты победил Головолом-бота и получил {{ finalXP }} XP!</p>
         <p v-else>Головолом-бот оказался сильнее... Попробуй ещё раз!</p>
+        <div style="text-align: center;">
+          <div class="mascot-container">
+            <template v-if="gameWon">
+              <img :src="mascotImage3" alt="Робот-маскот" class="mascot-image" />
+              <div class="speech-bubble">Ты справился!</div>
+            </template>
+            <template v-else>
+              <img :src="mascotImage2" alt="Робот-маскот" class="mascot-image" />
+              <div class="speech-bubble">Ой-ой!</div>
+            </template>
+          </div>
+        </div>
         <div class="game-over-buttons">
           <button
             class="restart-btn"
@@ -184,6 +196,8 @@
 </template>
 
 <script setup lang="ts">
+import mascotImage2 from '@/assets/images/8.png'
+import mascotImage3 from '@/assets/images/3.png'
 import { ref, computed } from 'vue';
 
 const emit = defineEmits<{
@@ -882,5 +896,40 @@ const exitGame = () => {
   .game-over-card h2 {
     font-size: 24px;
   }
+}
+
+.mascot-container {
+  position: relative;
+  display: inline-block;
+  margin: 20px 0;
+}
+
+.mascot-image {
+  width: 150px;
+  height: auto;
+  animation: bounce 2s infinite;
+}
+
+.speech-bubble {
+  position: absolute;
+  top: -30px;
+  right: -50px;
+  background: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  color: #5a3e2b;
+  font-weight: bold;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 20px;
+  border-width: 8px 8px 0 8px;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
 }
 </style>
