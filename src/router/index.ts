@@ -46,7 +46,6 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/community',
-    name: 'community',
     component: () => import('@/views/Community.vue'),
     meta: {
       title: 'Сообщество',
@@ -54,6 +53,11 @@ const routes: RouteRecordRaw[] = [
       transition: 'fade',
     },
     children: [
+      {
+        path: '',
+        name: 'community',
+        redirect: '/community/chat',
+      },
       {
         path: 'chat',
         name: 'community-chat',
@@ -77,10 +81,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'Проекты сообщества',
         },
-      },
-      {
-        path: '',
-        redirect: '/community/chat',
       },
     ],
   },

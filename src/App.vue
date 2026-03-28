@@ -475,7 +475,6 @@ const showNotification = (message: string, type: 'success' | 'error' | 'info' = 
 
 const handleAuthSuccess = () => {
   showNotification('Добро пожаловать в CodeCraft!', 'success');
-  showNotification('Ты получил 100 бонусных XP! 🎁', 'success');
   router.push('/dashboard');
 };
 
