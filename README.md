@@ -1,18 +1,75 @@
-# Vue 3 + TypeScript + Vite
+## Инструкция по деплою с помощью Docker
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+**1. Клонировать репозиторий**
 
-## Recommended IDE Setup
+```
+git clone https://github.com/xaxaton-5/frontend
+```
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+**2. Перейти в папку с проектом**
 
-## Type Support For `.vue` Imports in TS
+```
+cd frontend
+```
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+**3. Задать переменные окружения**
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+Создать .env в корне по примеру из .env.template (поменять VITE_API_BASE_URL и VITE_WEB_SOCKET_URL, если требуется другой url до api):
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+**4. Собрать Docker-образ (вместо xaxaton-team-4-frontend может быть ваше название)**
+
+```
+docker build -t xaxaton-team-4-frontend .
+```
+
+**5. Запустить контейнер**
+
+```
+docker run -p 80:80 xaxaton-team-4-frontend
+```
+
+**6. Теперь приложение доступно по адресу http://localhost**
+
+## Инструкция по деплою без использования Docker
+
+**1. Установить node.js 22**
+
+```
+https://nodejs.org/en/download
+```
+
+**2. Клонировать репозиторий**
+
+```
+git clone https://github.com/xaxaton-5/frontend
+```
+
+**3. Перейти в папку с проектом**
+
+```
+cd frontend
+```
+
+**4. Установить зависимости**
+
+```
+npm i
+```
+
+**5. Задать переменные окружения**
+
+Создать .env в корне по примеру из .env.template (поменять VITE_API_BASE_URL и VITE_WEB_SOCKET_URL, если требуется другой url до api):
+
+**6. Собрать проект**
+
+```
+npm run build
+```
+
+**7. В папке dist файлы проекта для дальнейшего деплоя**
+
+**8. Чтобы посмотреть собранный проект локально**
+
+```
+npm run preview
+```
