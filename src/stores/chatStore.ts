@@ -101,19 +101,27 @@ export const useChatStore = defineStore('chat', () => {
           return;
         }
 
-        // Текстовое сообщение:
-        // {
-        //   "text": "...",
-        //   "sender_name": "Parent",
-        //   "sender_id": 5,
-        //   "type": "text_msg"
-        // }
-        if (data.sender_id != null && data.text != null) {
+        // Сообщение может быть плоским или в обёртке { event, data } (как user_list_changed)
+        const payload =
+          data &&
+          typeof data.data === 'object' &&
+          data.data !== null &&
+          !Array.isArray(data.data)
+            ? data.data
+            : data;
+
+        const fromUser = payload.from_user ?? payload.sender_id;
+        const text = payload.text;
+
+        if (fromUser != null && text != null) {
           const newMessage: ChatMessage = {
-            id: Date.now(),
-            from_user: data.sender_id,
-            text: data.text,
-            sent_date: new Date().toISOString(),
+            id: typeof payload.id === 'number' ? payload.id : Date.now(),
+            from_user: fromUser,
+            text,
+            sent_date:
+              typeof payload.sent_date === 'string'
+                ? payload.sent_date
+                : new Date().toISOString(),
           };
           addMessage(newMessage);
         }
