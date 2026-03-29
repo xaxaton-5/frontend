@@ -3,5 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_WEB_SOCKET_URL: ${VITE_WEB_SOCKET_URL}
     ports:
       - "80:80"
