@@ -14,6 +14,8 @@ export interface ChatMessage {
 
 export const useChatStore = defineStore('chat', () => {
   let wsMessageIdSeq = 0;
+  let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  let shouldReconnect = true;
 
   // Состояние
   const messages = ref<ChatMessage[]>([]);
@@ -25,6 +27,23 @@ export const useChatStore = defineStore('chat', () => {
 
   // Геттеры
   const messagesCount = computed(() => messages.value.length);
+
+  const normalizeWebSocketUrl = (rawUrl?: string) => {
+    const fallbackUrl = 'ws://localhost:5001/ws';
+    const candidate = rawUrl?.trim() || fallbackUrl;
+
+    try {
+      const normalizedUrl = new URL(candidate);
+
+      if (!normalizedUrl.pathname || normalizedUrl.pathname === '/') {
+        normalizedUrl.pathname = '/ws';
+      }
+
+      return normalizedUrl.toString().replace(/\/$/, '');
+    } catch {
+      return fallbackUrl;
+    }
+  };
 
   const sortedMessages = computed(() => {
     return [...messages.value].sort(
@@ -73,11 +92,28 @@ export const useChatStore = defineStore('chat', () => {
   // Подключение к WebSocket
   const connectWebSocket = () => {
     const token = localStorage.getItem('access_token');
-    const wsUrl = import.meta.env.VITE_WEB_SOCKET_URL || 'ws://localhost:5001/ws';
+    const wsUrl = normalizeWebSocketUrl(import.meta.env.VITE_WEB_SOCKET_URL);
+
+    if (!token) {
+      console.warn('WebSocket не подключен: отсутствует access_token');
+      isConnected.value = false;
+      return;
+    }
 
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       console.log('WebSocket уже подключен');
       return;
+    }
+
+    if (ws.value && ws.value.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket уже в процессе подключения');
+      return;
+    }
+
+    shouldReconnect = true;
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
     }
 
     const url = `${wsUrl}?access_token=${token}`;
@@ -161,10 +197,11 @@ export const useChatStore = defineStore('chat', () => {
     ws.value.onclose = () => {
       console.log('WebSocket отключен');
       isConnected.value = false;
+      ws.value = null;
 
       // Попытка переподключения через 5 секунд
-      setTimeout(() => {
-        if (!isConnected.value) {
+      reconnectTimeout = setTimeout(() => {
+        if (shouldReconnect && !isConnected.value) {
           console.log('Попытка переподключения WebSocket...');
           connectWebSocket();
         }
@@ -174,6 +211,11 @@ export const useChatStore = defineStore('chat', () => {
 
   // Отключение WebSocket
   const disconnectWebSocket = () => {
+    shouldReconnect = false;
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
     if (ws.value) {
       ws.value.close();
       ws.value = null;
